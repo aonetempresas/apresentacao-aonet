@@ -1131,6 +1131,11 @@ class UpgradeEngine {
         this.url  = url;
         this.data = [];
         this.filterVendedor = '';
+        // Inicializa os containers de metas vazios (impede erro se a UI tentar ler antes do parse)
+        this.metasTimePadrao      = {};
+        this.metasTimeDesafio     = {};
+        this.metasVendedorPadrao  = {};
+        this.metasVendedorDesafio = {};
     }
 
     async sync() {
@@ -1238,17 +1243,23 @@ class UpgradeEngine {
     /* Retorna { padrao, desafio } pro vendedor (ou time) no mês informado.
        mesAno no formato "MM/AAAA". Vendedor vazio = time. */
     getMetas(mesAno, vendedor = '') {
+        // Defensivo: garante que os containers existem
+        const mp = this.metasVendedorPadrao  || {};
+        const md = this.metasVendedorDesafio || {};
+        const tp = this.metasTimePadrao      || {};
+        const td = this.metasTimeDesafio     || {};
+
         if (vendedor) {
-            const p = (this.metasVendedorPadrao[mesAno]  || {})[vendedor];
-            const d = (this.metasVendedorDesafio[mesAno] || {})[vendedor];
+            const p = (mp[mesAno] || {})[vendedor];
+            const d = (md[mesAno] || {})[vendedor];
             return { padrao: p || 0, desafio: d || 0 };
         }
         // Time: soma metas individuais do mês como fallback, ou usa o valor cravado
-        const somaPadraoMes  = Object.values(this.metasVendedorPadrao[mesAno]  || {}).reduce((a,b)=>a+b,0);
-        const somaDesafioMes = Object.values(this.metasVendedorDesafio[mesAno] || {}).reduce((a,b)=>a+b,0);
+        const somaPadraoMes  = Object.values(mp[mesAno] || {}).reduce((a,b)=>a+b,0);
+        const somaDesafioMes = Object.values(md[mesAno] || {}).reduce((a,b)=>a+b,0);
         return {
-            padrao:  this.metasTimePadrao['*']  || somaPadraoMes  || 0,
-            desafio: this.metasTimeDesafio['*'] || somaDesafioMes || 0
+            padrao:  tp['*']  || somaPadraoMes  || 0,
+            desafio: td['*'] || somaDesafioMes || 0
         };
     }
 
