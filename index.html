@@ -1,0 +1,2365 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BI Executivo — Aonet Corporativo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@latest"></script>
+    <style>
+        :root {
+            --primary:    #60A5FA;
+            --success:    #34D399;
+            --danger:     #F87171;
+            --warning:    #FBBF24;
+            --purple:     #818CF8;
+            --teal:       #2DD4BF;
+            --bg:         #0F172A;
+            --card-bg:    rgba(30, 41, 59, 0.55);
+            --card-border:rgba(255, 255, 255, 0.07);
+            --text-main:  #F1F5F9;
+            --text-muted: #94A3B8;
+            --accent:     #38BDF8;
+            --col: calc(100vw / 12);
+        }
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            overflow-x: hidden;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            background-image:
+                radial-gradient(at 0% 0%,   rgba(30,58,138,0.18) 0px, transparent 55%),
+                radial-gradient(at 100% 100%,rgba(30,58,138,0.12) 0px, transparent 55%),
+                radial-gradient(at 50% 0%,  rgba(56,189,248,0.05) 0px, transparent 40%);
+            color: var(--text-main);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* ─── LAYOUT WRAPPER ─── */
+        .page {
+            width: 100vw;
+            padding: 0;
+        }
+
+        /* ─── HEADER ─── */
+        .header {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            align-items: center;
+            padding: 22px 28px;
+            border-bottom: 1px solid var(--card-border);
+            background: rgba(15,23,42,0.7);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-brand {
+            grid-column: span 6;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .header-logo {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary), var(--teal));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .header-brand h1 {
+            font-size: 17px;
+            font-weight: 700;
+            letter-spacing: -0.4px;
+            color: var(--text-main);
+        }
+
+        .header-brand .header-sub {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 1px;
+        }
+
+        .header-right {
+            grid-column: span 6;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 16px;
+        }
+
+        .sync-status {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .sync-dot {
+            width: 7px;
+            height: 7px;
+            background: var(--success);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.5; }
+        }
+
+        .btn-sync {
+            background: rgba(96,165,250,0.1);
+            color: var(--primary);
+            border: 1px solid rgba(96,165,250,0.25);
+            padding: 9px 20px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-sync:hover {
+            background: rgba(96,165,250,0.2);
+            transform: translateY(-1px);
+        }
+
+        /* ─── MAIN CONTENT ─── */
+        .main {
+            padding: 28px;
+        }
+
+        /* ─── KPI STRIP — horizontal, one row ─── */
+        .kpi-strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(134px, 1fr); gap: 12px; margin-bottom: 24px; width: 100%; overflow-x: auto; padding-bottom: 6px; }
+        .kpi-strip::-webkit-scrollbar { height: 6px; }
+        .kpi-strip::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+        .kpi-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 18px 14px;
+            backdrop-filter: blur(10px);
+            transition: transform 0.25s, border-color 0.25s;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: var(--kpi-accent, var(--primary));
+            opacity: 0.7;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(255,255,255,0.12);
+        }
+
+        .kpi-label {
+            font-size: 9.5px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            line-height: 1.35;
+            margin-bottom: 8px;
+            min-height: 26px;        /* reserva 2 linhas → todos os valores alinhados */
+        }
+
+        .kpi-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: -0.3px;
+            line-height: 1.15;
+            white-space: nowrap;      /* mantém o valor numa linha só */
+            font-variant-numeric: tabular-nums;
+        }
+
+        .kpi-sub {
+            font-size: 10px;
+            color: var(--text-muted);
+            line-height: 1.3;
+            margin-top: auto;         /* empurra o subtítulo para a base do card */
+            padding-top: 6px;
+        }
+
+        /* ─── FILTER BAR ─── */
+        .filter-bar {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            padding: 12px 20px;
+            border-radius: 14px;
+            margin-bottom: 24px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .filter-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-item label {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-item select,
+        .filter-item input {
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-size: 13px;
+            font-weight: 600;
+            outline: none;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .filter-item select option { background: #1E293B; }
+
+        .btn-clear {
+            margin-left: auto;
+            background: transparent;
+            border: none;
+            color: var(--danger);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            opacity: 0.8;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-clear:hover { opacity: 1; }
+
+        /* ─── CHARTS GRID — 12 cols ─── */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .chart-card { overflow-x: auto;  display: flex; flex-direction: column; 
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 26px;  
+            grid-column: span 6;
+            backdrop-filter: blur(10px);
+            transition: border-color 0.25s;
+        }
+
+        .chart-card:hover { border-color: rgba(255,255,255,0.1); }
+        .chart-card.full  { grid-column: span 12; }
+        .chart-card.span4 { grid-column: span 4; }
+        .chart-card.span8 { grid-column: span 8; }
+
+        .chart-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: -0.2px;
+        }
+
+        .chart-badge {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-line   { background: rgba(96,165,250,0.15);  color: var(--primary); }
+        .badge-bar    { background: rgba(52,211,153,0.15);  color: var(--success); }
+        .badge-funnel { background: rgba(251,191,36,0.15);  color: var(--warning); }
+
+        /* ─── FUNNEL CUSTOM ─── */
+        .funnel-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 4px 0;
+        }
+
+        .funnel-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .funnel-row:hover { opacity: 0.85; }
+
+        .funnel-label {
+            width: 160px;
+            flex-shrink: 0;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            text-align: right;
+        }
+
+        .funnel-bar-wrap {
+            flex: 1;
+            height: 36px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .funnel-bar-fill {
+            height: 100%;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            padding-left: 12px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #fff;
+            transition: width 0.8s cubic-bezier(0.34,1.56,0.64,1);
+            position: relative;
+        }
+
+        .funnel-pct {
+            width: 52px;
+            flex-shrink: 0;
+            font-size: 11px;
+            font-weight: 700;
+            text-align: right;
+            color: var(--text-muted);
+        }
+
+        /* ─── SECTION CARD ─── */
+        .section-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 26px;  
+            margin-bottom: 24px;
+            backdrop-filter: blur(10px);
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--text-main);
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            text-align: left;
+            padding: 12px 16px;
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            border-bottom: 1px solid var(--card-border);
+            font-weight: 600;
+        }
+        td {
+            padding: 13px 16px;
+            font-size: 13px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(255,255,255,0.025); cursor: pointer; }
+
+        /* ─── INSIGHTS ─── */
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .insight-box {
+            background: rgba(59,130,246,0.05);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(59,130,246,0.1);
+        }
+
+        .insight-box h4 {
+            font-size: 11px;
+            color: var(--primary);
+            margin-bottom: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-weight: 700;
+        }
+
+        .insight-box p  { font-size: 13px; color: var(--text-muted); line-height: 1.8; }
+        .insight-box ul { list-style: none; margin-top: 8px; }
+        .insight-box li {
+            margin-bottom: 7px;
+            font-size: 13px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        .insight-box li::before { content: '→'; color: var(--primary); flex-shrink: 0; }
+
+        .strategy-card {
+            background: rgba(255,255,255,0.03);
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            border-left: 3px solid var(--primary);
+        }
+
+        .strategy-card p { font-size: 12px; color: var(--text-muted); line-height: 1.7; }
+
+        /* ─── MODAL ─── */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15,23,42,0.85);
+            backdrop-filter: blur(14px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+
+        .modal.active { display: flex; }
+
+        .modal-content {
+            background: #0F172A;
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 36px;
+            width: 100%;
+            max-width: 1100px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-close {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* ─── LOADER ─── */
+        #loader {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .loader-logo {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary), var(--teal));
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .spinner {
+            width: 28px;
+            height: 28px;
+            border: 2px solid rgba(255,255,255,0.08);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ─── RESPONSIVE ─── */
+        @media (max-width: 1400px) {
+            .kpi-strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(134px, 1fr); gap: 12px; margin-bottom: 24px; width: 100%; overflow-x: auto; padding-bottom: 6px; }
+            .kpi-value { font-size: 16px; }
+            .kpi-card { padding: 16px 14px; }
+        }
+        @media (max-width: 1100px) {
+            .kpi-strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(134px, 1fr); gap: 12px; margin-bottom: 24px; width: 100%; overflow-x: auto; padding-bottom: 6px; }
+        }
+
+        @media (max-width: 1024px) {
+            .chart-card,
+            .chart-card.span4,
+            .chart-card.span8 { grid-column: span 12; }
+            .insights-grid    { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            .main { padding: 16px; }
+            .kpi-strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(134px, 1fr); gap: 12px; margin-bottom: 24px; width: 100%; overflow-x: auto; padding-bottom: 6px; }
+            .header { padding: 16px; }
+            .funnel-label { width: 100px; font-size: 10px; }
+        }
+
+        @media (max-width: 480px) {
+            .kpi-strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(134px, 1fr); gap: 12px; margin-bottom: 24px; width: 100%; overflow-x: auto; padding-bottom: 6px; }
+            .kpi-value { font-size: 16px; }
+        }
+
+        /* ─── SCROLLBAR ─── */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+    
+        /* ─── RENOVAÇÕES POR MÊS ─── */
+        .renewals-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .month-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: transform 0.2s;
+        }
+
+        .month-card:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .month-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 8px;
+        }
+
+        .month-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--primary);
+            text-transform: uppercase;
+        }
+
+        .month-total {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--success);
+        }
+
+        .renewal-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 11px;
+            padding: 6px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .renewal-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .renewal-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .renewal-company {
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .renewal-vendedor {
+            color: var(--text-muted);
+            font-size: 10px;
+        }
+
+        .renewal-value {
+            font-weight: 700;
+            color: var(--text-main);
+            white-space: nowrap;
+        }
+
+        .renewal-date {
+            font-size: 9px;
+            color: var(--primary);
+            opacity: 0.8;
+        }
+    
+    
+        .month-card.clickable {
+            cursor: pointer;
+            padding: 20px;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        .month-card.clickable:hover {
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(96, 165, 250, 0.1);
+        }
+        .month-count {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--text-main);
+            margin: 10px 0;
+        }
+        .month-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+    
+
+        #card-cidade-wrap { max-height: 500px; overflow-y: auto; overflow-x: hidden; padding-right: 10px; }
+        #card-cidade-wrap::-webkit-scrollbar { width: 6px; }
+        #card-cidade-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        
+
+        .chart-scroll-container { 
+            width: 100%; 
+            overflow-x: auto; 
+            overflow-y: hidden; 
+            padding-bottom: 10px;
+        }
+        .chart-scroll-container::-webkit-scrollbar { height: 6px; }
+        .chart-scroll-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        .chart-inner { min-width: 1000px; } /* Força o scroll se houver muitos dados */
+
+        /* ═══════════════════════════════════════════════
+           UPGRADE — botão, card especial, visão dedicada
+        ═══════════════════════════════════════════════ */
+
+        /* Botão "Upgrades" no header */
+        .btn-upgrade-toggle {
+            background: rgba(52,211,153,0.12);
+            color: var(--success);
+            border: 1px solid rgba(52,211,153,0.30);
+            padding: 9px 18px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-right: 10px;
+        }
+        .btn-upgrade-toggle:hover {
+            background: rgba(52,211,153,0.22);
+            transform: translateY(-1px);
+        }
+
+        /* Card "Receita de Upgrade" na esteira (clicável) */
+        .kpi-card.upgrade-card { cursor: pointer; }
+        .kpi-card.upgrade-card:hover {
+            border-color: rgba(52,211,153,0.45);
+        }
+        .upgrade-detail {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+        .upgrade-detail .down {
+            color: var(--danger);
+            font-weight: 700;
+        }
+
+        /* Visão dedicada de Upgrade */
+        #upgrade-view {
+            display: none;
+            padding: 28px;
+        }
+        #upgrade-view.active { display: block; }
+        #content.upgrade-mode .main { display: none; }
+
+        .upg-back {
+            background: rgba(148,163,184,0.10);
+            border: 1px solid var(--card-border);
+            color: var(--text-muted);
+            padding: 9px 16px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            margin-bottom: 18px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .upg-back:hover {
+            background: rgba(148,163,184,0.20);
+            color: var(--text-main);
+        }
+
+        .upg-section-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            background: rgba(52,211,153,0.12);
+            color: var(--success);
+            padding: 6px 14px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        /* Filter bar específica de upgrade */
+        .upg-filter-bar {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            padding: 12px 20px;
+            border-radius: 14px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        /* Strip de KPIs da visão dedicada — todos os cards em uma única linha */
+        .upg-kpi-strip {
+            display: grid;
+            grid-auto-flow: column;                       /* tudo numa linha só */
+            grid-auto-columns: minmax(150px, 1fr);        /* expande no desktop, encolhe até 150px */
+            gap: 14px;
+            margin-bottom: 22px;
+            overflow-x: auto;                             /* rola na horizontal em telas estreitas */
+            padding-bottom: 6px;
+        }
+        .upg-kpi-strip::-webkit-scrollbar { height: 6px; }
+        .upg-kpi-strip::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+        /* Cards de gráfico na visão dedicada */
+        .upg-charts-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        .upg-chart-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 26px;
+            backdrop-filter: blur(10px);
+        }
+        .upg-chart-card.full  { grid-column: span 12; }
+        .upg-chart-card.half  { grid-column: span 6; }
+        @media (max-width: 1024px) {
+            .upg-chart-card.half { grid-column: span 12; }
+        }
+    
+    </style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+    <div class="loader-logo">A</div>
+    <div class="spinner"></div>
+    <p style="font-size:13px; color:var(--text-muted);">Carregando dados do Google Sheets...</p>
+</div>
+
+<div class="page" id="content" style="display:none">
+
+    <!-- ─── HEADER ─── -->
+    <header class="header">
+        <div class="header-brand">
+            <div class="header-logo">A</div>
+            <div>
+                <h1>Aonet Corporativo &nbsp;·&nbsp; BI Executivo</h1>
+                <div class="header-sub sync-status">
+                    <div class="sync-dot"></div>
+                    <span id="update-time">Sincronizando...</span>
+                </div>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="btn-upgrade-toggle" onclick="ui.openUpgradeView()">📈 Upgrades</button>
+            <button class="btn-sync" onclick="ui.syncAndRender()">⟳ &nbsp;Sincronizar</button>
+        </div>
+    </header>
+
+    <div class="main">
+
+        <!-- ─── KPI STRIP ─── -->
+        <section class="kpi-strip">
+            <div class="kpi-card" style="--kpi-accent:var(--warning)">
+                <p class="kpi-label">Projeção Mensal</p>
+                <p class="kpi-value" id="kpi-projecao" style="color:var(--warning)">R$ 0</p>
+                <p class="kpi-sub" id="kpi-projecao-sub">Base: Últimos 3 dias</p>
+            </div>
+            <div class="kpi-card" style="--kpi-accent:var(--primary)">
+                <p class="kpi-label">VOLUME TOTAL</p>
+                <p class="kpi-value" id="kpi-volume">R$ 0</p>
+                <p class="kpi-sub">Total de Propostas</p>
+            </div>
+            <div class="kpi-card" style="--kpi-accent:var(--success)">
+                <p class="kpi-label">Faturamento Real</p>
+                <p class="kpi-value" id="kpi-faturamento" style="color:var(--success)">R$ 0</p>
+                <p class="kpi-sub">Vendas Efetivadas</p>
+            </div>
+            <div class="kpi-card" style="--kpi-accent:var(--text-muted)">
+                <p class="kpi-label">Total Propostas</p>
+                <p class="kpi-value" id="kpi-propostas">0</p>
+                <p class="kpi-sub">Leads no período</p>
+            </div>
+            <div class="kpi-card" style="--kpi-accent:var(--success)">
+                <p class="kpi-label">Instaladas</p>
+                <p class="kpi-value" id="kpi-fechadas" style="color:var(--success)">0</p>
+                <p class="kpi-sub">Vendas Efetivadas</p>
+            </div>
+            <div class="kpi-card" style="--kpi-accent:var(--warning)">
+                <p class="kpi-label">Aguard. Instalação</p>
+                <p class="kpi-value" id="kpi-waiting" style="color:var(--warning)">0</p>
+                <p class="kpi-sub">Pendente ativação</p>
+            </div>
+            <div class="kpi-card" style="--kpi-accent:var(--purple)">
+                <p class="kpi-label">Ticket Médio</p>
+                <p class="kpi-value" id="kpi-ticket">R$ 0</p>
+                <p class="kpi-sub">Base: Efetivadas</p>
+            </div>
+            <div class="kpi-card" style="--kpi-accent:var(--teal)">
+                <p class="kpi-label">Conversão</p>
+                <p class="kpi-value" id="kpi-conversao" style="color:var(--teal)">0%</p>
+                <p class="kpi-sub">Eficiência Geral</p>
+            </div>
+            <div class="kpi-card" style="--kpi-accent:var(--danger)">
+                <p class="kpi-label">Cancelados</p>
+                <p class="kpi-value" id="kpi-cancelados" style="color:var(--danger)">0</p>
+                <p class="kpi-sub" id="kpi-cancelados-sub">Perda: 0%</p>
+            </div>
+            <div class="kpi-card upgrade-card" style="--kpi-accent:var(--success)" onclick="ui.openUpgradeView()">
+                <p class="kpi-label">Receita de Upgrade</p>
+                <p class="kpi-value" id="kpi-upgrade-receita" style="color:var(--success)">R$ 0</p>
+                <p class="kpi-sub upgrade-detail" id="kpi-upgrade-sub">0 upgrade(s) efetivado(s)</p>
+            </div>
+        </section>
+
+        <!-- ─── FILTERS ─── -->
+        <section class="filter-bar">
+            <div class="filter-item">
+                <label>Início</label>
+                <input type="date" id="date-start" onchange="ui.updateFilter('dateStart', this.value)">
+            </div>
+            <div class="filter-item">
+                <label>Fim</label>
+                <input type="date" id="date-end" onchange="ui.updateFilter('dateEnd', this.value)">
+            </div>
+            <div class="filter-item">
+                <label>Vendedor</label>
+                <select id="filter-vendedor" onchange="ui.updateFilter('vendedor', this.value)"></select>
+            </div>
+            <div class="filter-item">
+                <label>Segmento</label>
+                <select id="filter-segmento" onchange="ui.updateFilter('segmento', this.value)"></select>
+            </div>
+            <button class="btn-clear" onclick="ui.clearFilters()">✕ Limpar Filtros</button>
+        </section>
+
+        <!-- ─── CHARTS GRID ─── -->
+        <div class="charts-grid">
+
+            <!-- 1. Evolução Diária — LINE -->
+            <div class="chart-card full">
+                <h3 class="chart-title">
+                    Evolução Diária — Faturamento Real
+                    <span class="chart-badge badge-line">Line</span>
+                </h3>
+                <div id="chart-evolucao"></div>
+            </div>
+
+            <!-- 2. Funil de Status — FUNNEL -->
+            <div class="chart-card">
+                <h3 class="chart-title">
+                    Funil de Conversão por Status
+                    <span class="chart-badge badge-funnel">Funnel</span>
+                </h3>
+                <div id="funnel-status" class="funnel-wrap"></div>
+            </div>
+
+            <!-- 3. Ranking de Conversão por Vendedor — BAR -->
+            <div class="chart-card" id="card-vendedor">
+                <h3 class="chart-title">
+                    Ranking de Conversão por Vendedor
+                    <span class="chart-badge badge-bar">Bar</span>
+                </h3>
+                <div class="chart-scroll-container"><div id="chart-vendedor" class="chart-inner"></div></div>
+            </div>
+
+            <!-- 4. Alcance por Cidade — BAR -->
+            <div class="chart-card">
+                <h3 class="chart-title">
+                    Performance por Cidade
+                    <span class="chart-badge badge-bar">Bar</span>
+                </h3>
+                <div class="chart-scroll-container"><div id="chart-cidade" class="chart-inner"></div></div>
+            </div>
+
+            <!-- 5. Segmento / Faturamento — BAR -->
+            <div class="chart-card">
+                <h3 class="chart-title">
+                    Segmento — Faturamento
+                    <span class="chart-badge badge-bar">Bar</span>
+                </h3>
+                <div class="chart-scroll-container"><div id="chart-segmento" class="chart-inner"></div></div>
+            </div>
+
+            <!-- 6. Ranking de Planos — BAR -->
+            <div class="chart-card">
+                <h3 class="chart-title">
+                    Ranking de Planos
+                    <span class="chart-badge badge-bar">Bar</span>
+                </h3>
+                <div class="chart-scroll-container"><div id="chart-planos" class="chart-inner"></div></div>
+            </div>
+
+            <!-- 7. Porte da Empresa — BAR -->
+            <div class="chart-card">
+                <h3 class="chart-title">
+                    Porte da Empresa
+                    <span class="chart-badge badge-bar">Bar</span>
+                </h3>
+                <div id="chart-porte"></div>
+            </div>
+
+            <!-- 8. Performance por Canal — BAR FULL -->
+            <div class="chart-card full">
+                <h3 class="chart-title">
+                    Performance por Canal &amp; Origem — Faturamento Real
+                    <span class="chart-badge badge-bar">Bar</span>
+                </h3>
+                <div id="chart-canal-performance"></div>
+            </div>
+
+            <!-- 9. Motivos de Perda — BAR -->
+            <div class="chart-card">
+                <h3 class="chart-title">
+                    Motivos de Perda
+                    <span class="chart-badge badge-bar">Bar</span>
+                </h3>
+                <div id="chart-motivos"></div>
+            </div>
+
+            <!-- 10. Concorrentes — BAR -->
+            <div class="chart-card">
+                <h3 class="chart-title">
+                    Concorrentes
+                    <span class="chart-badge badge-bar">Bar</span>
+                </h3>
+                <div id="chart-concorrentes"></div>
+            </div>
+
+        </div>
+
+        <!-- ─── INSIGHTS ─── -->
+        <div class="insights-grid">
+            <div class="insight-box">
+                <h4>Resumo Executivo</h4>
+                <div id="insight-resumo"></div>
+            </div>
+            <div class="insight-box">
+                <h4>Performance Comercial</h4>
+                <div id="insight-performance"></div>
+            </div>
+            <div class="insight-box">
+                <h4>Estratégias Recomendadas</h4>
+                <div id="insight-estrategias"></div>
+            </div>
+        </div>
+
+        <!-- ─── RENOVAÇÕES ─── -->
+        <div class="section-card">
+            <p class="section-title">Renovações por Mês</p>
+            <div id="renewals-container" class="renewals-grid"></div>
+        </div>
+
+    </div><!-- /main -->
+
+    <!-- ═══════════════════════════════════════════════
+         VISÃO DEDICADA DE UPGRADE
+         (oculta por padrão, abre clicando no botão ou card)
+    ═══════════════════════════════════════════════ -->
+    <div id="upgrade-view">
+        <button class="upg-back" onclick="ui.closeUpgradeView()">← Voltar à esteira principal</button>
+        <div class="upg-section-tag">📈 Visão Dedicada — Upgrades &amp; Migrações</div>
+
+        <div class="upg-filter-bar">
+            <div class="filter-item">
+                <label>Vendedor</label>
+                <select id="upg-filter-vendedor" onchange="ui.updateUpgFilter(this.value)"></select>
+            </div>
+            <div style="margin-left:auto;font-size:11px;color:var(--text-muted)" id="upg-last-update"></div>
+        </div>
+
+        <div class="upg-kpi-strip" id="upg-kpis"></div>
+
+        <div class="upg-charts-grid">
+            <div class="upg-chart-card full">
+                <h3 class="chart-title">Evolução acumulada — upgrade vs downgrade</h3>
+                <div id="upg-chart-evolucao"></div>
+            </div>
+            <div class="upg-chart-card half">
+                <h3 class="chart-title">Ranking de incremento líquido por consultor (upgrade − downgrade efetivado)</h3>
+                <div id="upg-chart-ranking"></div>
+            </div>
+            <div class="upg-chart-card half">
+                <h3 class="chart-title">Planos antigos com mais upgrades (passe o mouse para ver o destino)</h3>
+                <div id="upg-chart-planos"></div>
+            </div>
+        </div>
+    </div><!-- /upgrade-view -->
+
+</div><!-- /page -->
+
+<!-- ─── MODAL DRILLDOWN ─── -->
+<div class="modal" id="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle" style="font-size:16px; font-weight:700;"></h2>
+            <button class="modal-close" onclick="document.getElementById('modal').classList.remove('active')">✕</button>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th><th>Vendedor</th><th>Empresa</th>
+                    <th>Plano</th><th>Valor</th><th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="modalTableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════
+   UPGRADE — Configuração de metas
+   Edite estes valores quando precisar trocar.
+   Quando entrar vendedor novo, adicione uma linha aqui.
+════════════════════════════════════════════════ */
+const METAS_UPGRADE = {
+    "":                  3000,   // Meta mensal do TIME
+    "LUIS CARLOS":       1500,
+    "RODRIGO GABRIEL":   1000,
+    "VINICIUS SALLAS":    500,
+    "JESSICA LIMA":       500
+};
+
+const CSV_URL_UPGRADE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTBH6_CprKZd0Go1LZ7ZbqLAiw8di-b3rtYK65Ww0EIuARR17V9sf3KMzg7kJzbB3GBu68lc03MLhaG/pub?gid=1039532197&single=true&output=csv";
+
+/* ════════════════════════════════════════════════
+   ENGINE — Upgrade (lê a aba "Upgrades")
+════════════════════════════════════════════════ */
+class UpgradeEngine {
+    constructor(url) {
+        this.url  = url;
+        this.data = [];
+        this.filterVendedor = '';
+    }
+
+    async sync() {
+        try {
+            const r = await fetch(this.url + '&t=' + Date.now());
+            if (!r.ok) return false;
+            const csv = await r.text();
+            this.parse(csv);
+            return true;
+        } catch(e) { return false; }
+    }
+
+    parse(csv) {
+        const lines = csv.split('\n');
+        // localiza primeira linha que começa com data dd/mm/aaaa
+        let start = -1;
+        for (let i = 0; i < lines.length; i++) {
+            if (/^["\s]*\d{2}\/\d{2}\/\d{4}/.test(lines[i])) { start = i; break; }
+        }
+        if (start === -1) { this.data = []; return; }
+
+        // Colunas A-K da aba Upgrades:
+        // A Data | B Vendedor | C Empresa | D Origem | E Plano antigo | F Valor antigo
+        // G Plano novo | H Valor novo | I Δ | J Tipo | K Status
+        this.data = lines.slice(start).map(line => {
+            const v = this.splitLine(line);
+            if (v.length < 5 || !v[1]) return null;
+
+            const num = s => parseFloat((s||'').replace(/[R$\s.]/g,'').replace(',','.')) || 0;
+            const vAnt = num(v[5]);
+            const vNovo = num(v[7]);
+            const status = (v[10]||'').toUpperCase().trim();
+            const vendedor = (v[1]||'').toUpperCase().trim();
+
+            return {
+                d_p:       v[0],
+                vendedor:  vendedor,
+                emp:       v[2],
+                origem:    (v[3]||'').toUpperCase().trim(),
+                planoAnt:  (v[4]||'').toUpperCase().trim(),
+                valAnt:    vAnt,
+                planoNovo: (v[6]||'').toUpperCase().trim(),
+                valNovo:   vNovo,
+                delta:     +(vNovo - vAnt).toFixed(2),
+                status:    status,
+                date:      this.toDate(v[0])
+            };
+        }).filter(x => x && x.emp);
+    }
+
+    splitLine(l) {
+        const r = []; let c = '', q = false;
+        for (let char of l) {
+            if (char === '"') q = !q;
+            else if (char === ',' && !q) { r.push(c.trim()); c = ''; }
+            else c += char;
+        }
+        r.push(c.trim()); return r;
+    }
+
+    toDate(s) {
+        if (!s) return null;
+        const p = s.split('/');
+        return p.length === 3 ? new Date(p[2], p[1]-1, p[0]) : null;
+    }
+
+    /* Filtragem por vendedor */
+    rowsFor(vendedor) {
+        return vendedor ? this.data.filter(d => d.vendedor === vendedor) : this.data;
+    }
+
+    /* Lista de vendedores únicos (pra dropdown) */
+    vendedores() {
+        return [...new Set(this.data.map(d => d.vendedor))].sort();
+    }
+}
+
+const upgradeEngine = new UpgradeEngine(CSV_URL_UPGRADE);
+
+/* ════════════════════════════════════════════════
+   DASHBOARD ENGINE — original
+════════════════════════════════════════════════ */
+class DashboardEngine {
+    constructor(url) {
+        this.url      = url;
+        this.data     = [];
+        this.filtered = [];
+        this.filters  = { dateStart:'', dateEnd:'', vendedor:'', segmento:'' };
+    }
+
+    async sync() {
+        try {
+            const r = await fetch(this.url + '&t=' + Date.now());
+            if (!r.ok) return false;
+            const csv = await r.text();
+            this.parse(csv);
+            this.apply();
+            return true;
+        } catch(e) { return false; }
+    }
+
+        parse(csv) {
+        const lines = csv.split('\n');
+        let start = -1;
+        for (let i = 0; i < lines.length; i++) {
+            if (/^["\s]*\d{2}\/\d{2}\/\d{4}/.test(lines[i])) { start = i; break; }
+        }
+        if (start === -1) return;
+
+        const cols = ['d_p','prot','vend','canal','orig','emp','seg','porte','func','cid','est','tel','wpp','plano','val','conc','stat','d_i','d_f','d_r','mot','ciclo','mes'];
+        
+        this.data = lines.slice(start).map(line => {
+            const v = this.splitLine(line);
+            if (v.length < 5) return null;
+            
+            const r = {};
+            cols.forEach((c, i) => r[c] = (v[i] || '').toString().trim());
+            
+            // Normalização robusta de valor monetário
+            const valorRaw = r.val.replace(/[R$\s.]/g,'').replace(',','.');
+            const valor = parseFloat(valorRaw) || 0;
+            
+            // Normalização de campos de texto (Maiúsculas e sem espaços extras)
+            return {
+                ...r,
+                vendedor:  r.vend.toUpperCase(),
+                status:    r.stat.toUpperCase(),
+                canal:     r.canal.toUpperCase(),
+                origem:    r.orig.toUpperCase(),
+                segmento:  r.seg.toUpperCase(),
+                cid:       r.cid.toUpperCase(),
+                porte:     r.porte.toUpperCase(),
+                plano:     r.plano.toUpperCase(),
+                concorrente: r.conc.toUpperCase(),
+                motivo:    r.mot.toUpperCase(),
+                valor,
+                date:      this.toDate(r.d_p),
+                dateInst:  this.toDate(r.d_i),
+                dateRenov: this.toDate(r.d_r)
+            };
+        }).filter(x => x && x.emp);
+    }
+
+    splitLine(l) {
+        const r = []; let c = '', q = false;
+        for (let char of l) {
+            if (char === '"') q = !q;
+            else if (char === ',' && !q) { r.push(c.trim()); c = ''; }
+            else c += char;
+        }
+        r.push(c.trim()); return r;
+    }
+
+    toDate(s) {
+        if (!s) return null;
+        const p = s.split('/');
+        return p.length === 3 ? new Date(p[2], p[1]-1, p[0]) : null;
+    }
+
+    apply() {
+        // Datas montadas no horário LOCAL (evita o desvio de fuso do new Date("aaaa-mm-dd"),
+        // que era lido como UTC e deixava o último dia do intervalo de fora).
+        const parseLocal = (str, fimDoDia) => {
+            if (!str) return null;
+            const [y, m, d] = str.split('-').map(Number);
+            return fimDoDia ? new Date(y, m - 1, d, 23, 59, 59, 999)
+                            : new Date(y, m - 1, d, 0, 0, 0, 0);
+        };
+        const s = parseLocal(this.filters.dateStart, false);  // início → 00:00:00 do dia
+        const e = parseLocal(this.filters.dateEnd,   true);   // fim    → 23:59:59 do dia (inclui o dia todo)
+
+        // respeita os filtros de vendedor e segmento (usado nos 3 conjuntos)
+        const matchVS = d =>
+            (!this.filters.vendedor || d.vendedor === this.filters.vendedor) &&
+            (!this.filters.segmento || d.segmento === this.filters.segmento);
+
+        // ── Conjunto 1: por DATA DA PROPOSTA ──
+        // Base de Volume, Total de Propostas e dos gráficos de pipeline (funil, perdas, etc.)
+        this.filtered = this.data.filter(d => {
+            if (!matchVS(d)) return false;
+            if (s && d.date < s) return false;
+            if (e && d.date > e) return false;
+            return true;
+        });
+
+        // ── Conjunto 2: por DATA DE INSTALAÇÃO (só vendas efetivadas) ──
+        // Base de Faturamento Real, Instaladas, Ticket e dos gráficos de receita.
+        // Se a venda estiver efetivada mas sem data de instalação preenchida,
+        // usamos a data da proposta como fallback para o valor não sumir.
+        this.filteredInst = this.data.filter(d => {
+            if (!matchVS(d)) return false;
+            if (d.status !== 'VENDA EFETIVADA') return false;
+            const di = d.dateInst || d.date;
+            if (s && di < s) return false;
+            if (e && di > e) return false;
+            return true;
+        });
+
+        // ── Conjunto 3: AGUARDANDO INSTALAÇÃO (retrato) ──
+        // Mostra o pendente atual independente do filtro de data (só vendedor/segmento).
+        this.aguardando = this.data.filter(d => matchVS(d) && d.status === 'AGUARDANDO INSTALAÇÃO');
+    }
+}
+
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTBH6_CprKZd0Go1LZ7ZbqLAiw8di-b3rtYK65Ww0EIuARR17V9sf3KMzg7kJzbB3GBu68lc03MLhaG/pub?gid=82294573&single=true&output=csv";
+const engine  = new DashboardEngine(CSV_URL);
+
+/* ════════════════════════════════════════════════
+   UI
+════════════════════════════════════════════════ */
+const ui = {
+
+    fmt(v) {
+        return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    },
+
+    async syncAndRender() {
+        try {
+            document.getElementById('loader').style.display = 'flex';
+            const ok = await engine.sync();
+            // Sincroniza também a aba de Upgrades — totalmente isolada, NUNCA bloqueia
+            try { await upgradeEngine.sync(); } catch(e) { console.warn('Upgrade sync falhou:', e); }
+            if (ok) {
+                this.populate();
+                this.render();
+                document.getElementById('update-time').innerText = `Atualizado: ${new Date().toLocaleTimeString('pt-BR')}`;
+                // Tudo de upgrade roda APÓS o dashboard principal, isolado em try/catch
+                try { this.populateUpgradeFilter(); } catch(e) { console.warn('populateUpgradeFilter:', e); }
+                try { this.renderUpgradeCard(); } catch(e) { console.warn('renderUpgradeCard:', e); }
+            } else {
+                document.getElementById('update-time').innerText = 'Falha na sincronização';
+            }
+        } catch (err) {
+            console.error('UI Render Error:', err);
+            document.getElementById('update-time').innerText = 'Erro na Renderização: ' + err.message;
+        } finally {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+        }
+    },
+
+    render() {
+        this.renderKPIs();
+        this.renderCharts();
+        this.renderInsights();
+        this.renderRenovacoes();
+    },
+
+
+    // ── Auxiliares de Dias Úteis ──
+    isBusinessDay(date) {
+        const day = date.getDay();
+        return day !== 0 && day !== 6; // 0=Dom, 6=Sáb
+    },
+
+    getBusinessDaysLeft() {
+        const today = new Date();
+        // Normalizar para o início do dia para evitar problemas de comparação de horário
+        const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        
+        let count = 0;
+        let cur = new Date(start);
+        cur.setDate(cur.getDate() + 1); // Começar de amanhã
+        
+        while (cur <= lastDay) {
+            if (this.isBusinessDay(cur)) count++;
+            cur.setDate(cur.getDate() + 1);
+        }
+        return count;
+    },
+
+    getRecentBusinessDays(sortedKeys, limit = 3) {
+        const result = [];
+        for (let i = sortedKeys.length - 1; i >= 0 && result.length < limit; i--) {
+            const [d, m, y] = sortedKeys[i].split('/');
+            const date = new Date(y, m - 1, d);
+            if (this.isBusinessDay(date)) result.push(sortedKeys[i]);
+        }
+        return result;
+    },
+
+    /* ── KPIs ── */
+    renderKPIs() {
+        const efet     = engine.filteredInst;                          // instaladas — por DATA DE INSTALAÇÃO
+        const faturamento = efet.reduce((a,b) => a + b.valor, 0);
+        const volume   = engine.filtered.reduce((a,b) => a + b.valor, 0); // por DATA DA PROPOSTA
+        const fechadas = efet.length;
+        const total    = engine.filtered.length;                       // propostas — por DATA DA PROPOSTA
+        const waiting  = engine.aguardando.length;                     // retrato do pendente (ignora data)
+        const canceled = engine.filtered.filter(d => d.status === 'CANCELADO');
+        const canceledCount = canceled.length;
+        const canceledValue = canceled.reduce((a,b) => a + b.valor, 0);
+        const churnRate = total ? (canceledCount / total * 100).toFixed(1) : 0;
+
+        document.getElementById('kpi-volume').innerText    = this.fmt(volume);
+        document.getElementById('kpi-faturamento').innerText = this.fmt(faturamento);
+        document.getElementById('kpi-propostas').innerText = total;
+        document.getElementById('kpi-fechadas').innerText  = fechadas;
+        document.getElementById('kpi-waiting').innerText   = waiting;
+        document.getElementById('kpi-cancelados').innerText = canceledCount;
+        document.getElementById('kpi-cancelados-sub').innerText = `Perda: ${churnRate}% (${this.fmt(canceledValue)})`;
+        document.getElementById('kpi-ticket').innerText    = this.fmt(fechadas ? faturamento/fechadas : 0);
+        document.getElementById('kpi-conversao').innerText = (total ? (fechadas/total*100).toFixed(1) : 0) + '%';
+
+                // ── Lógica de Projeção (Dias Úteis) — agora pela DATA DE INSTALAÇÃO ──
+        const evol = {};
+        efet.forEach(d => {
+            const dt = (d.d_i || d.d_p || '').trim(); 
+            if (!dt) return;
+            if (!evol[dt]) evol[dt] = 0;
+            evol[dt] += d.valor;
+        });
+                const sortedDays = Object.keys(evol).sort((a,b) => {
+            const pa = a.split('/').map(Number);
+            const pb = b.split('/').map(Number);
+            const dateA = new Date(pa[2], pa[1]-1, pa[0]);
+            const dateB = new Date(pb[2], pb[1]-1, pb[0]);
+            return dateA.getTime() - dateB.getTime();
+        });
+        
+        const last3BizDays = this.getRecentBusinessDays(sortedDays, 3);
+        const avgLast3 = last3BizDays.length ? last3BizDays.reduce((a,k) => a + evol[k], 0) / last3BizDays.length : 0;
+        
+        const bizDaysLeft = this.getBusinessDaysLeft();
+        const projection = faturamento + (avgLast3 * bizDaysLeft);
+        
+        document.getElementById('kpi-projecao').innerText = this.fmt(projection);
+        document.getElementById('kpi-projecao-sub').innerText = `Est. Final: ${this.fmt(avgLast3)}/dia útil`;
+    },
+
+    /* ── CHARTS ── */
+    renderCharts() {
+        const COLORS = ['#60A5FA','#34D399','#FBBF24','#818CF8','#F87171','#2DD4BF','#FB923C','#A78BFA'];
+
+        const BASE = {
+            chart:       { 
+                toolbar: { show: true, tools: { download: false, selection: true, zoom: true, zoomin: true, zoomout: true, pan: true, reset: true } }, 
+                background: 'transparent', 
+                fontFamily: 'Inter',
+                animations: { enabled: true, easing: 'easeinout', speed: 800 } // Desativar animações para scroll mais fluido
+            },
+            grid:        { show: false },
+            theme:       { mode: 'dark' },
+            legend:      { labels: { colors: '#94A3B8' }, position: 'bottom' },
+            xaxis:       { axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { colors: '#64748B', fontSize: '11px' } } },
+            yaxis:       { labels: { style: { colors: '#64748B', fontSize: '11px' } } },
+            tooltip:     { theme: 'dark' },
+            dataLabels:  { enabled: false },
+            stroke:      { curve: 'smooth', width: 2 }
+        };
+
+        /* ─ 1. Evolução Diária — LINE (pela DATA DE INSTALAÇÃO) ─ */
+        const evol = {};
+        engine.filteredInst.forEach(d => {
+            const dt = (d.d_i || d.d_p || '').trim();
+            if (!dt) return;
+            if (!evol[dt]) evol[dt] = { v:0, c:0 };
+            evol[dt].v += d.valor; evol[dt].c++;
+        });
+                const evolKeys = Object.keys(evol).sort((a,b) => {
+            const pa = a.split('/').map(Number);
+            const pb = b.split('/').map(Number);
+            const dateA = new Date(pa[2], pa[1]-1, pa[0]);
+            const dateB = new Date(pb[2], pb[1]-1, pb[0]);
+            return dateA.getTime() - dateB.getTime();
+        });
+
+        // Calcular projeção para o gráfico
+        const last3DaysKeys = evolKeys.slice(-3);
+        const avgRecent = last3DaysKeys.length ? last3DaysKeys.reduce((a,k) => a + evol[k].v, 0) / last3DaysKeys.length : 0;
+
+        this.chart('chart-evolucao', {
+            ...BASE,
+            series: [{ name: 'Faturamento Real', data: evolKeys.map(k => +evol[k].v.toFixed(2)) }],
+            chart:  { ...BASE.chart, type: 'area', height: 280, events: { dataPointSelection: (e,c,cfg) => this.openDrilldown('evolucao', evolKeys[cfg.dataPointIndex]) } },
+            colors: ['#60A5FA'],
+            fill:   { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.25, opacityTo: 0 } },
+            xaxis:  { ...BASE.xaxis, categories: evolKeys },
+            yaxis:  { ...BASE.yaxis, labels: { ...BASE.yaxis.labels, formatter: v => (v/1000).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0}) + 'k' } },
+            annotations: {
+                yaxis: [{
+                    y: avgRecent,
+                    borderColor: '#FBBF24',
+                    label: {
+                        borderColor: '#FBBF24',
+                        style: { color: '#fff', background: '#FBBF24' },
+                        text: 'Média Recente (3d)'
+                    }
+                }]
+            },
+            dataLabels: { enabled: false },
+            tooltip: {
+                theme: 'dark',
+                custom: ({ dataPointIndex }) => {
+                    const k = evolKeys[dataPointIndex];
+                    if (!k) return '';
+                    return `<div style="padding:10px;background:#1E293B;border:1px solid #334155;border-radius:8px;">
+                        <div style="font-size:11px;color:#94A3B8;margin-bottom:4px;">${k}</div>
+                        <div style="font-weight:700;color:#fff;">${evol[k].v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
+                        <div style="font-size:11px;color:#60A5FA;">Vendas: ${evol[k].c}</div>
+                    </div>`;
+                }
+            }
+        });
+
+        /* ─ 2. Funil de Conversão — FUNNEL (custom HTML) ─ */
+        const stMap = {};
+        engine.filtered.forEach(d => {
+            if (!stMap[d.status]) stMap[d.status] = { count:0, valor:0 };
+            stMap[d.status].count++;
+            stMap[d.status].valor += d.valor;
+        });
+
+        const FUNNEL_ORDER = [
+            { key: 'VENDA EFETIVADA',      color: '#34D399' },
+            { key: 'AGUARDANDO INSTALAÇÃO', color: '#FBBF24' },
+            { key: 'EM NEGOCIAÇÃO',         color: '#60A5FA' },
+            { key: 'PERDIDO',               color: '#F87171' }
+        ];
+
+        const funnelData = FUNNEL_ORDER
+            .filter(f => stMap[f.key])
+            .map(f => ({ ...f, count: stMap[f.key].count, valor: stMap[f.key].valor }))
+            .concat(
+                Object.entries(stMap)
+                    .filter(([k]) => !FUNNEL_ORDER.find(f => f.key === k))
+                    .map(([k, v]) => ({ key: k, color: '#818CF8', count: v.count, valor: v.valor }))
+            )
+            .sort((a,b) => b.count - a.count);
+
+        const maxCount = funnelData[0]?.count || 1;
+        const totalCount = engine.filtered.length || 1;
+
+        document.getElementById('funnel-status').innerHTML = funnelData.map(item => {
+            const pct = Math.round(item.count / maxCount * 100);
+            const pctTotal = (item.count / totalCount * 100).toFixed(1);
+            return `<div class="funnel-row" onclick="ui.openDrilldown('status','${item.key}')">
+                <div class="funnel-label">${item.key}</div>
+                <div class="funnel-bar-wrap">
+                    <div class="funnel-bar-fill" style="width:${pct}%;background:${item.color}22;border-left:3px solid ${item.color};">
+                        <span style="color:${item.color};font-size:12px;font-weight:700;">${item.count}</span>
+                    </div>
+                </div>
+                <div class="funnel-pct" style="color:${item.color}">${pctTotal}%</div>
+            </div>`;
+        }).join('');
+
+        /* ─ 3. Vendedores — BAR ─ */
+        const vMap = {};
+        engine.filtered.forEach(d => {
+            if (!vMap[d.vendedor]) vMap[d.vendedor] = { t:0, f:0, v:0, daily:{} };
+            vMap[d.vendedor].t++;
+            if (d.status === 'VENDA EFETIVADA') { 
+                vMap[d.vendedor].f++; 
+                vMap[d.vendedor].v += d.valor; 
+                const dt = d.d_p;
+                vMap[d.vendedor].daily[dt] = (vMap[d.vendedor].daily[dt] || 0) + d.valor;
+            }
+        });
+        const vSorted = Object.entries(vMap)
+            .map(([name, data]) => [name, data, data.f/data.t*100])
+            .sort((a,b) => b[2] - a[2])
+            ;
+
+        const cardVendedor = document.getElementById('card-vendedor');
+        if (engine.filters.vendedor) {
+            cardVendedor.style.display = 'none';
+        } else {
+            cardVendedor.style.display = 'block';
+            this.chart('chart-vendedor', {
+                ...BASE,
+                series: [{ name: 'Conversão %', data: vSorted.map(s => +s[2].toFixed(1)) }],
+                chart:  { ...BASE.chart, type: 'bar', height: 300,
+                    events: { dataPointSelection: (e,c,cfg) => this.openDrilldown('vendedor', vSorted[cfg.dataPointIndex][0]) }
+                },
+                plotOptions: { bar: { borderRadius: 6, columnWidth: '35%', distributed: true, dataLabels: { position: 'top' } } },
+                colors: COLORS,
+                xaxis:  { ...BASE.xaxis, categories: vSorted.map(s => s[0]) },
+                legend: { show: false },
+                dataLabels: { enabled: true, offsetY: -20, style: { fontSize: '10px', colors: ['#94A3B8'] }, formatter: v => v + '%' },
+                tooltip: {
+                    theme: 'dark',
+                    custom: ({ dataPointIndex }) => {
+                        const s = vSorted[dataPointIndex];
+                        const name = s[0];
+                        const data = s[1];
+                        
+                        // Calcular projeção individual (Dias Úteis)
+                        const days = Object.keys(data.daily).sort((a,b) => {
+                            const [da,ma,ya] = a.split('/'); const [db,mb,yb] = b.split('/');
+                            return new Date(ya,ma-1,da) - new Date(yb,mb-1,db);
+                        }, vSorted.length);
+                        const last3Biz = ui.getRecentBusinessDays(days, 3);
+                        const avg = last3Biz.length ? last3Biz.reduce((a,k) => a + data.daily[k], 0) / last3Biz.length : 0;
+                        const bizLeft = ui.getBusinessDaysLeft();
+                        const proj = data.v + (avg * bizLeft);
+
+                        return `<div style="padding:12px;background:rgba(30,41,59,0.95);border:1px solid #334155;border-radius:8px;min-width:180px;">
+                            <div style="font-weight:700;color:#fff;border-bottom:1px solid #334155;padding-bottom:6px;margin-bottom:6px;">${name}</div>
+                            <div style="color:#10B981;font-size:12px;">Conversão: ${s[2].toFixed(1)}%</div>
+                            <div style="color:#60A5FA;font-size:12px;">Vendas: ${data.f} / Leads: ${data.t}</div>
+                            <div style="color:#F1F5F9;font-size:12px;margin-top:4px;">Fat. Atual: ${data.v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
+                            <div style="color:#FBBF24;font-size:12px;font-weight:700;margin-top:4px;border-top:1px solid #334155;padding-top:4px;">Projeção: ${proj.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
+                        </div>`;
+                    }
+                }
+            }, vSorted.length);
+        }
+
+        
+        /* ─ 4. Cidade — BAR VERTICAL (corrigido: colunas verticais + nomes das cidades) ─ */
+        const cMap = {};
+        engine.filteredInst.forEach(d => {
+            const city = d.cid.toUpperCase().trim() || 'N/A';
+            if (!cMap[city]) cMap[city] = { v:0, c:0, segments:{} };
+            cMap[city].v += d.valor; cMap[city].c++;
+            cMap[city].segments[d.segmento] = (cMap[city].segments[d.segmento]||0) + 1;
+        });
+        const cSorted = Object.entries(cMap).sort((a,b) => b[1].v - a[1].v);
+
+        // Formatador adaptativo: valores pequenos em R$ cheio, grandes em "k"
+        const fmtCidade = v => v >= 1000
+            ? (v/1000).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) + 'k'
+            : v.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
+
+        this.chart('chart-cidade', {
+            ...BASE,
+            series: [{ name: 'Faturamento', data: cSorted.map(s => +s[1].v.toFixed(2)) }],
+            chart: {
+                ...BASE.chart,
+                type: 'bar',
+                height: 360,
+                toolbar: { show: false },
+                events: { dataPointSelection: (e,c,cfg) => this.openDrilldown('cid', cSorted[cfg.dataPointIndex][0]) }
+            },
+            plotOptions: {
+                bar: {
+                    horizontal: false,        // ← coluna vertical
+                    borderRadius: 6,
+                    columnWidth: '45%',
+                    distributed: true,
+                    dataLabels: { position: 'top' }
+                }
+            },
+            colors: COLORS,
+            xaxis: {
+                ...BASE.xaxis,
+                categories: cSorted.map(s => s[0]),   // ← nomes das cidades no lugar certo (eixo X)
+                labels: {
+                    rotate: -45,
+                    rotateAlways: true,
+                    trim: false,
+                    hideOverlappingLabels: false,
+                    style: { colors: '#94A3B8', fontSize: '11px', fontWeight: 600 }
+                }
+            },
+            yaxis: {
+                ...BASE.yaxis,
+                labels: { ...BASE.yaxis.labels, formatter: fmtCidade }
+            },
+            legend: { show: false },
+            dataLabels: {
+                enabled: true,
+                offsetY: -20,
+                style: { fontSize: '10px', colors: ['#94A3B8'] },
+                formatter: fmtCidade
+            },
+            tooltip: {
+                theme: 'dark',
+                custom: ({ dataPointIndex }) => {
+                    const s = cSorted[dataPointIndex];
+                    const segs = Object.entries(s[1].segments).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]).join('<br>• ');
+                    return `<div style="padding:12px;background:rgba(30,41,59,0.95);border:1px solid #334155;border-radius:8px;min-width:180px;">
+                        <div style="font-weight:700;color:#fff;border-bottom:1px solid #334155;padding-bottom:6px;margin-bottom:6px;">${s[0]}</div>
+                        <div style="color:#10B981;font-size:12px;">Fat.: ${s[1].v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
+                        <div style="color:#60A5FA;font-size:12px;">Instalações: ${s[1].c}</div>
+                        <div style="font-size:10px;color:#94A3B8;margin-top:6px;">Segmentos:<br>• ${segs}</div>
+                    </div>`;
+                }
+            }
+        }, cSorted.length);
+
+
+        /* ─ 5. Segmento — BAR ─ */
+        const segMap = {};
+        engine.filteredInst.forEach(d => {
+            if (!segMap[d.segmento]) segMap[d.segmento] = { v:0, c:0, cities:{} };
+            segMap[d.segmento].v += d.valor; segMap[d.segmento].c++;
+            const city = d.cid.toUpperCase().trim() || 'N/A';
+            segMap[d.segmento].cities[city] = (segMap[d.segmento].cities[city]||0) + 1;
+        });
+        const segSorted = Object.entries(segMap).sort((a,b) => b[1].v - a[1].v);
+        this.chart('chart-segmento', { ...BASE, series: [{ name: 'Faturamento', data: segSorted.map(s => +s[1].v.toFixed(2)) }], 
+            chart: { ...BASE.chart, type: 'bar', height: 300, events: { dataPointSelection: (e,c,cfg) => this.openDrilldown('segmento', segSorted[cfg.dataPointIndex][0]) } },
+            plotOptions: { bar: { borderRadius: 6, columnWidth: '35%', distributed: true, dataLabels: { position: 'top' } } },
+            colors: COLORS,
+            xaxis:  { ...BASE.xaxis, categories: segSorted.map(s => s[0]),  },
+            yaxis:  { ...BASE.yaxis, labels: { ...BASE.yaxis.labels, formatter: v => (v/1000).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0}) + 'k' } },
+            legend: { show: false },
+            dataLabels: { enabled: true, offsetY: -20, style: { fontSize: '10px', colors: ['#94A3B8'] }, formatter: v => (v/1000).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) + 'k' },
+            tooltip: {
+                theme: 'dark',
+                custom: ({ dataPointIndex }) => {
+                    const s = segSorted[dataPointIndex];
+                    const cities = Object.entries(s[1].cities).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]).join('<br>• ');
+                    return `<div style="padding:12px;background:rgba(30,41,59,0.95);border:1px solid #334155;border-radius:8px;min-width:180px;">
+                        <div style="font-weight:700;color:#fff;border-bottom:1px solid #334155;padding-bottom:6px;margin-bottom:6px;">${s[0]}</div>
+                        <div style="color:#10B981;font-size:12px;">Fat.: ${s[1].v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
+                        <div style="color:#60A5FA;font-size:12px;">Empresas: ${s[1].c}</div>
+                        <div style="font-size:10px;color:#94A3B8;margin-top:6px;">Cidades:<br>• ${cities}</div>
+                    </div>`;
+                }
+            }
+        }, segSorted.length);
+
+        /* ─ 6. Planos — BAR ─ */
+        const pMap = {};
+        engine.filteredInst.forEach(d => {
+            if (!pMap[d.plano]) pMap[d.plano] = { v:0, c:0, cities:{} };
+            pMap[d.plano].v += d.valor; pMap[d.plano].c++;
+            const city = d.cid.toUpperCase().trim() || 'N/A';
+            pMap[d.plano].cities[city] = (pMap[d.plano].cities[city]||0) + 1;
+        }, segSorted.length);
+        const pSorted = Object.entries(pMap).sort((a,b) => b[1].v - a[1].v);
+        this.chart('chart-planos', {
+            ...BASE,
+            series: [{ name: 'Faturamento', data: pSorted.map(s => +s[1].v.toFixed(2)) }],
+            chart:  { ...BASE.chart, type: 'bar', height: 300, events: { dataPointSelection: (e,c,cfg) => this.openDrilldown('plano', pSorted[cfg.dataPointIndex][0]) } },
+            plotOptions: { bar: { borderRadius: 6, columnWidth: '35%', distributed: true, dataLabels: { position: 'top' } } },
+            colors: COLORS,
+            xaxis:  { ...BASE.xaxis, categories: pSorted.map(s => s[0]),  },
+            yaxis:  { ...BASE.yaxis, labels: { ...BASE.yaxis.labels, formatter: v => (v/1000).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0}) + 'k' } },
+            legend: { show: false },
+            dataLabels: { enabled: true, offsetY: -20, style: { fontSize: '10px', colors: ['#94A3B8'] }, formatter: v => (v/1000).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) + 'k' },
+            tooltip: {
+                theme: 'dark',
+                custom: ({ dataPointIndex }) => {
+                    const s = pSorted[dataPointIndex];
+                    const cities = Object.entries(s[1].cities).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]).join('<br>• ');
+                    return `<div style="padding:12px;background:rgba(30,41,59,0.95);border:1px solid #334155;border-radius:8px;min-width:180px;">
+                        <div style="font-weight:700;color:#fff;border-bottom:1px solid #334155;padding-bottom:6px;margin-bottom:6px;">${s[0]}</div>
+                        <div style="color:#10B981;font-size:12px;">Fat.: ${s[1].v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
+                        <div style="color:#60A5FA;font-size:12px;">Vendas: ${s[1].c}</div>
+                        <div style="font-size:10px;color:#94A3B8;margin-top:6px;">Cidades:<br>• ${cities}</div>
+                    </div>`;
+                }
+            }
+        }, pSorted.length);
+
+        /* ─ 7. Porte — BAR ─ */
+        const porteMap = {};
+        engine.filtered.forEach(d => {
+            if (!porteMap[d.porte]) porteMap[d.porte] = { v:0, c:0, cities:{} };
+            porteMap[d.porte].v += d.valor; porteMap[d.porte].c++;
+            const city = d.cid.toUpperCase().trim() || 'N/A';
+            porteMap[d.porte].cities[city] = (porteMap[d.porte].cities[city]||0) + 1;
+        }, pSorted.length);
+        const porteSorted = Object.entries(porteMap).sort((a,b) => b[1].v - a[1].v);
+        this.chart('chart-porte', {
+            ...BASE,
+            series: [{ name: 'Faturamento', data: porteSorted.map(s => +s[1].v.toFixed(2)) }],
+            chart:  { ...BASE.chart, type: 'bar', height: 300, events: { dataPointSelection: (e,c,cfg) => this.openDrilldown('porte', porteSorted[cfg.dataPointIndex][0]) } },
+            plotOptions: { bar: { borderRadius: 6, columnWidth: '35%', distributed: true, dataLabels: { position: 'top' } } },
+            colors: COLORS,
+            xaxis:  { ...BASE.xaxis, categories: porteSorted.map(s => s[0]) },
+            yaxis:  { ...BASE.yaxis, labels: { ...BASE.yaxis.labels, formatter: v => (v/1000).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0}) + 'k' } },
+            legend: { show: false },
+            dataLabels: { enabled: true, offsetY: -20, style: { fontSize: '10px', colors: ['#94A3B8'] }, formatter: v => (v/1000).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) + 'k' },
+            tooltip: {
+                theme: 'dark',
+                custom: ({ dataPointIndex }) => {
+                    const s = porteSorted[dataPointIndex];
+                    const cities = Object.entries(s[1].cities).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]).join('<br>• ');
+                    return `<div style="padding:12px;background:rgba(30,41,59,0.95);border:1px solid #334155;border-radius:8px;min-width:180px;">
+                        <div style="font-weight:700;color:#fff;border-bottom:1px solid #334155;padding-bottom:6px;margin-bottom:6px;">${s[0]}</div>
+                        <div style="color:#10B981;font-size:12px;">Fat.: ${s[1].v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
+                        <div style="color:#60A5FA;font-size:12px;">Leads: ${s[1].c}</div>
+                        <div style="font-size:10px;color:#94A3B8;margin-top:6px;">Cidades:<br>• ${cities}</div>
+                    </div>`;
+                }
+            }
+        });
+
+        /* ─ 8. Canal + Origem — BAR FULL ─ */
+        const cPerf = {};
+        engine.filteredInst.forEach(d => {
+            const key = `${d.canal} — ${d.origem}`;
+            if (!cPerf[key]) cPerf[key] = { v:0, c:0 };
+            cPerf[key].v += d.valor; cPerf[key].c++;
+        });
+        const cpSorted = Object.entries(cPerf).sort((a,b) => b[1].v - a[1].v);
+        this.chart('chart-canal-performance', {
+            ...BASE,
+            series: [{ name: 'Faturamento Real', data: cpSorted.map(s => +s[1].v.toFixed(2)) }],
+            chart:  { ...BASE.chart, height: 320, type: 'bar', events: { dataPointSelection: (e,c,cfg) => this.openDrilldown('canal_origem', cpSorted[cfg.dataPointIndex][0]) } },
+            colors: COLORS,
+            plotOptions: { bar: { borderRadius: 6, columnWidth: '35%', distributed: true, dataLabels: { position: 'top' } } },
+            xaxis:  { ...BASE.xaxis, categories: cpSorted.map(s => s[0]), labels: { style: { fontSize: '10px', colors: '#64748B' } } },
+            yaxis:  { show: false },
+            legend: { show: false },
+            dataLabels: { enabled: true, offsetY: -20, style: { fontSize: '10px', colors: ['#94A3B8'] }, formatter: v => (v/1000).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) + 'k' },
+            tooltip: {
+                theme: 'dark',
+                custom: ({ dataPointIndex }) => {
+                    const s = cpSorted[dataPointIndex];
+                    return `<div style="padding:12px;background:rgba(30,41,59,0.95);border:1px solid #334155;border-radius:8px;">
+                        <div style="font-weight:700;color:#fff;border-bottom:1px solid #334155;padding-bottom:6px;margin-bottom:6px;">${s[0]}</div>
+                        <div style="color:#10B981;font-size:12px;">Fat.: ${s[1].v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
+                        <div style="color:#60A5FA;font-size:12px;">Vendas: ${s[1].c}</div>
+                    </div>`;
+                }
+            }
+        });
+
+        /* ─ 9. Motivos de Perda — BAR HORIZONTAL ─ */
+        const mPerda = {};
+        engine.filtered.filter(d => d.status === 'PERDIDO').forEach(d => {
+            const mot = d.mot || 'N/A'; mPerda[mot] = (mPerda[mot]||0) + 1;
+        });
+        const mPerdaSorted = Object.entries(mPerda).sort((a,b) => b[1]-a[1]);
+        this.chart('chart-motivos', {
+            ...BASE,
+            series: [{ name: 'Perdas', data: mPerdaSorted.map(s => s[1]) }],
+            chart:  { ...BASE.chart, type: 'bar', height: 300, events: { dataPointSelection: (e,c,cfg) => this.openDrilldown('mot', mPerdaSorted[cfg.dataPointIndex][0]) } },
+            plotOptions: { bar: { horizontal: false, borderRadius: 6, barHeight: '50%', distributed: true } },
+            colors: ['#F87171','#FB923C','#FBBF24','#F87171','#FB923C','#FBBF24'],
+            xaxis:  { ...BASE.xaxis, categories: mPerdaSorted.map(s => s[0]) },
+            legend: { show: false },
+            dataLabels: { enabled: true, style: { fontSize: '11px', colors: ['#94A3B8'] } }
+        });
+
+        /* ─ 10. Concorrentes — BAR ─ */
+        const concMap = {};
+        engine.filtered.filter(d => d.status === 'PERDIDO').forEach(d => {
+            const c = d.conc || 'N/A'; if (c !== 'N/A') concMap[c] = (concMap[c]||0) + 1;
+        });
+        const concSorted = Object.entries(concMap).sort((a,b) => b[1]-a[1]);
+        this.chart('chart-concorrentes', {
+            ...BASE,
+            series: [{ name: 'Perdas', data: concSorted.map(s => s[1]) }],
+            chart:  { ...BASE.chart, type: 'bar', height: 300, events: { dataPointSelection: (e,c,cfg) => this.openDrilldown('conc', concSorted[cfg.dataPointIndex][0]) } },
+            plotOptions: { bar: { borderRadius: 6, columnWidth: '35%', distributed: true, dataLabels: { position: 'top' } } },
+            colors: ['#FBBF24','#FB923C','#F87171','#FBBF24','#FB923C','#F87171'],
+            xaxis:  { ...BASE.xaxis, categories: concSorted.map(s => s[0]) },
+            legend: { show: false },
+            dataLabels: { enabled: true, offsetY: -20, style: { fontSize: '11px', colors: ['#94A3B8'] } }
+        });
+    },
+
+    /* ── Chart helper ── */
+    
+    
+    
+    chart(id, opt, dataLength = 0) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        
+        // Se houver muitos dados, expandimos a largura do gráfico para caber tudo sem espremer
+        if (dataLength > 6) {
+            el.style.width = (dataLength * 110) + 'px';
+        } else {
+            el.style.width = '100%';
+        }
+
+        if (el._chart) { el._chart.destroy(); }
+        el._chart = new ApexCharts(el, opt);
+        el._chart.render();
+    },
+    
+    
+    
+
+    /* ── Insights ── */
+    renderInsights() {
+        const efet        = engine.filteredInst;   // receita/líderes — por DATA DE INSTALAÇÃO
+        const faturamento = efet.reduce((a,b) => a + b.valor, 0);
+        const segLider    = this.getTop(efet, 'segmento');
+        const planoLider  = this.getTop(efet, 'plano');
+        const canalLider  = this.getTop(efet, 'canal');
+        const concLider   = this.getTop(engine.filtered.filter(d=>d.status==='PERDIDO'), 'conc');
+        const motLider    = this.getTop(engine.filtered.filter(d=>d.status==='PERDIDO'), 'mot');
+        const conv        = engine.filtered.length ? (efet.length/engine.filtered.length*100).toFixed(1) : 0;
+
+        document.getElementById('insight-resumo').innerHTML = `
+            <p>Faturamento consolidado de <strong>${this.fmt(faturamento)}</strong> no período. O segmento <strong>${segLider.name}</strong> é o motor principal de receita, enquanto o plano <strong>${planoLider.name}</strong> lidera a aderência de mercado.</p>`;
+
+        document.getElementById('insight-performance').innerHTML = `
+            <ul>
+                <li>Canal líder: <strong>${canalLider.name}</strong></li>
+                <li>Principal concorrente: <strong>${concLider.name}</strong></li>
+                <li>Eficiência de conversão: <strong>${conv}%</strong></li>
+            </ul>`;
+
+        document.getElementById('insight-estrategias').innerHTML = `
+            <div class="strategy-card">
+                <p><strong>Retenção:</strong> Atuar sobre o motivo "${motLider.name}" para reduzir o churn de pipeline.</p>
+            </div>
+            <div class="strategy-card">
+                <p><strong>Expansão Geográfica:</strong> Replicar a estratégia da cidade líder para regiões de menor penetração.</p>
+            </div>
+            <div class="strategy-card">
+                <p><strong>Mix de Produto:</strong> Incentivar o upsell do plano ${planoLider.name} para soluções corporativas premium.</p>
+            </div>`;
+    },
+
+    getTop(arr, field) {
+        const m = {};
+        arr.forEach(d => {
+            const k = d[field] || 'N/A';
+            if (!m[k]) m[k] = { v:0, c:0 };
+            m[k].v += d.valor; m[k].c++;
+        });
+        const s = Object.entries(m).sort((a,b) => b[1].v - a[1].v);
+        return s.length ? { name: s[0][0], val: s[0][1].v, count: s[0][1].c } : { name:'N/A', val:0, count:0 };
+    },
+
+            /* ── Renovações ── */
+    renderRenovacoes() {
+        const meses = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
+        const hoje = new Date();
+        
+        const grupos = {};
+        engine.data.forEach(d => {
+            if (d.dateRenov && d.dateRenov >= hoje) {
+                const m = d.dateRenov.getMonth();
+                const y = d.dateRenov.getFullYear();
+                const key = `${y}-${m}`;
+                if (!grupos[key]) grupos[key] = { mes: meses[m], ano: y, count: 0, total: 0, rawKey: key };
+                grupos[key].count++;
+                grupos[key].total += d.valor;
+            }
+        });
+
+        const chaves = Object.keys(grupos).sort((a,b) => {
+            const [y1, m1] = a.split('-').map(Number);
+            const [y2, m2] = b.split('-').map(Number);
+            return (y1 * 12 + m1) - (y2 * 12 + m2);
+        });
+
+        const container = document.getElementById('renewals-container');
+        if (chaves.length === 0) {
+            container.innerHTML = '<p style="color:var(--text-muted); font-size:12px;">Nenhuma renovação futura encontrada.</p>';
+            return;
+        }
+
+        container.innerHTML = chaves.map(key => {
+            const g = grupos[key];
+            return `
+                <div class="month-card clickable" onclick="ui.openDrilldown('renov_month','${g.rawKey}|${g.mes} ${g.ano}')">
+                    <div class="month-name">${g.mes} ${g.ano}</div>
+                    <div class="month-count">${g.count}</div>
+                    <div class="month-label">Renovações</div>
+                    <div class="month-total" style="margin-top:10px; font-size:14px;">${this.fmt(g.total)}</div>
+                </div>
+            `;
+        }).join('');
+    },
+
+    /* ── Populate filters ── */
+    populate() {
+        const v = [...new Set(engine.data.map(d => d.vendedor))].sort();
+        const s = [...new Set(engine.data.map(d => d.segmento))].sort();
+        const fill = (id, list) => {
+            const el = document.getElementById(id);
+            const prev = el.value;
+            el.innerHTML = '<option value="">Todos</option>' + list.map(i => `<option value="${i}">${i}</option>`).join('');
+            el.value = prev;
+        };
+        fill('filter-vendedor', v);
+        fill('filter-segmento', s);
+    },
+
+    updateFilter(k, v) { 
+        engine.filters[k] = (k === 'vendedor' || k === 'segmento') ? v.toUpperCase() : v; 
+        engine.apply(); 
+        this.render(); 
+        try { this.renderUpgradeCard(); } catch(e) { console.warn('renderUpgradeCard:', e); }
+    },
+
+    clearFilters() {
+        ['date-start','date-end','filter-vendedor','filter-segmento'].forEach(id => {
+            document.getElementById(id).value = '';
+        });
+        engine.filters = { dateStart:'', dateEnd:'', vendedor:'', segmento:'' };
+        engine.apply(); 
+        this.render();
+        try { this.renderUpgradeCard(); } catch(e) { console.warn('renderUpgradeCard:', e); }
+    },
+
+    /* ════════════════════════════════════════════════
+       UPGRADE — render do card na esteira + visão dedicada
+    ════════════════════════════════════════════════ */
+
+    /* Helper: filtra ups e downs efetivados até hoje (data <= hoje) */
+    upgradeMovs(vendedor = '') {
+        const rows = upgradeEngine.rowsFor(vendedor);
+        const hoje = new Date();
+        hoje.setHours(23, 59, 59, 999); // até o final do dia atual
+        const ate = d => d.date && d.date <= hoje;
+        return {
+            ups:        rows.filter(d => d.status === 'UPGRADE EFETIVADO'   && ate(d)),
+            downs:      rows.filter(d => d.status === 'DOWNGRADE EFETIVADO' && ate(d)),
+            aguard:     rows.filter(d => d.status === 'AGUARDANDO UPGRADE'),
+            cancelados: rows.filter(d => d.status === 'UPGRADE CANCELADO' || d.status === 'DOWNGRADE CANCELADO'),
+            allUps:     rows.filter(d => d.status === 'UPGRADE EFETIVADO'),
+            allDowns:   rows.filter(d => d.status === 'DOWNGRADE EFETIVADO')
+        };
+    },
+
+    /* Card "Receita de Upgrade" na esteira principal — respeita filtro de vendedor */
+    renderUpgradeCard() {
+        const vendedor = engine.filters.vendedor || '';
+        const m = this.upgradeMovs(vendedor);
+        const incremento = m.ups.reduce((a,b) => a + b.delta, 0);
+        const retracao   = m.downs.reduce((a,b) => a + b.delta, 0);
+        const liquido    = incremento + retracao;
+
+        const valEl = document.getElementById('kpi-upgrade-receita');
+        const subEl = document.getElementById('kpi-upgrade-sub');
+
+        if (liquido !== 0 || m.ups.length > 0 || m.downs.length > 0) {
+            valEl.innerText = (liquido >= 0 ? '+ ' : '') + this.fmt(liquido);
+            valEl.style.color = liquido >= 0 ? 'var(--success)' : 'var(--danger)';
+        } else {
+            valEl.innerText = 'R$ 0,00';
+            valEl.style.color = 'var(--text-muted)';
+        }
+
+        // Subtítulo: conta a história
+        if (retracao < 0) {
+            subEl.innerHTML = `seria + ${this.fmt(incremento)}, mas teve <span class="down">${this.fmt(retracao)}</span> de downgrade`;
+        } else {
+            subEl.innerHTML = `${m.ups.length} upgrade(s) efetivado(s)${vendedor ? ' · ' + vendedor : ''}`;
+        }
+    },
+
+    /* Popula dropdown de vendedor na visão dedicada */
+    populateUpgradeFilter() {
+        const vendedores = upgradeEngine.vendedores();
+        const el = document.getElementById('upg-filter-vendedor');
+        const prev = el.value;
+        el.innerHTML = '<option value="">Todos</option>' + vendedores.map(v => `<option value="${v}">${v}</option>`).join('');
+        el.value = prev;
+    },
+
+    updateUpgFilter(value) {
+        upgradeEngine.filterVendedor = value;
+        this.renderUpgradeView();
+    },
+
+    /* Abre a visão dedicada de Upgrade */
+    openUpgradeView() {
+        document.getElementById('content').classList.add('upgrade-mode');
+        document.getElementById('upgrade-view').classList.add('active');
+        this.renderUpgradeView();
+        window.scrollTo(0, 0);
+    },
+
+    /* Volta pra esteira */
+    closeUpgradeView() {
+        document.getElementById('content').classList.remove('upgrade-mode');
+        document.getElementById('upgrade-view').classList.remove('active');
+        window.scrollTo(0, 0);
+    },
+
+    /* Render completo da visão dedicada */
+    renderUpgradeView() {
+        const vendedor = upgradeEngine.filterVendedor;
+        const m = this.upgradeMovs(vendedor);
+
+        const incremento = m.ups.reduce((a,b) => a + b.delta, 0);
+        const retracao   = m.downs.reduce((a,b) => a + b.delta, 0);
+        const liquido    = incremento + retracao;
+        const pipeline   = m.aguard.reduce((a,b) => a + b.delta, 0);
+        const perdaCanc  = m.cancelados.reduce((a,b) => a + b.delta, 0);
+        const ticket     = m.ups.length ? incremento / m.ups.length : 0;
+
+        /* ── Meta ── */
+        const meta = METAS_UPGRADE[vendedor] || 0;
+        const hoje = new Date();
+        const ano  = hoje.getFullYear(), mes = hoje.getMonth();
+
+        // Dias úteis do mês (segunda a sexta)
+        let diasUteisMes = 0;
+        const ultDia = new Date(ano, mes + 1, 0).getDate();
+        for (let d = 1; d <= ultDia; d++) {
+            const dow = new Date(ano, mes, d).getDay();
+            if (dow >= 1 && dow <= 5) diasUteisMes++;
+        }
+        const metaDiaria = diasUteisMes > 0 ? meta / diasUteisMes : 0;
+
+        // Realizado do mês (ups + downs efetivados nas datas <= hoje, do mês atual)
+        const inicioMes = new Date(ano, mes, 1);
+        const noMes = d => d.date && d.date >= inicioMes && d.date <= new Date(ano, mes, hoje.getDate(), 23, 59, 59);
+        const realMes = m.ups.filter(noMes).reduce((a,b)=>a+b.delta,0)
+                      + m.downs.filter(noMes).reduce((a,b)=>a+b.delta,0);
+
+        // Realizado de hoje
+        const hojeStr = `${String(hoje.getDate()).padStart(2,'0')}/${String(hoje.getMonth()+1).padStart(2,'0')}/${hoje.getFullYear()}`;
+        const realDia = m.ups.filter(d => d.d_p === hojeStr).reduce((a,b)=>a+b.delta,0)
+                      + m.downs.filter(d => d.d_p === hojeStr).reduce((a,b)=>a+b.delta,0);
+
+        const pctMes = meta > 0 ? (realMes / meta) * 100 : 0;
+        const pctDia = metaDiaria > 0 ? (realDia / metaDiaria) * 100 : 0;
+
+        const corDe = pct => pct >= 100 ? '#34D399' : (pct >= 70 ? '#FBBF24' : '#60A5FA');
+        const subMeta = (pct, metaVal) => {
+            const cor = corDe(pct);
+            const pctTxt = pct.toFixed(1).replace('.', ',') + '%';
+            return `<span style="color:${cor};font-weight:700">${pctTxt}</span> de ${this.fmt(metaVal)}`;
+        };
+
+        // Sub do card de incremento
+        const subIncremento = retracao < 0
+            ? `seria + ${this.fmt(incremento)}, mas teve <span style="color:#F87171;font-weight:700">${this.fmt(retracao)}</span> de downgrade`
+            : 'só upgrade efetivado';
+
+        const kpis = [
+            { l:'Meta hoje',  v:(realDia>=0?'+ ':'')+this.fmt(realDia), s:subMeta(pctDia, metaDiaria), vc:corDe(pctDia), c:corDe(pctDia) },
+            { l:'Meta mês',   v:(realMes>=0?'+ ':'')+this.fmt(realMes), s:subMeta(pctMes, meta),       vc:corDe(pctMes), c:corDe(pctMes) },
+            { l:'Upgrades efetivados', v:m.ups.length, s:'finalizados no período', c:'#34D399' },
+            { l:'Incremento de receita', v:(liquido>=0?'+ ':'')+this.fmt(liquido), s:subIncremento, c:'#34D399', vc:(liquido>=0?'#34D399':'#F87171') },
+            { l:'Ticket médio do upgrade', v:this.fmt(ticket), s:'Δ médio por upgrade', c:'#2DD4BF' },
+            { l:'Aguardando upgrade', v:m.aguard.length, s:`${this.fmt(pipeline)} de pipeline`, c:'#FBBF24', vc:'#FBBF24' },
+            { l:'Downgrades efetivados', v:m.downs.length, s:'reduções de plano', c:'#F87171' },
+            { l:'Retração de receita', v:this.fmt(retracao), s:'só downgrade efetivado', c:'#F87171', vc:'#F87171' },
+            { l:'Cancelados', v:m.cancelados.length, s:m.cancelados.length>0?`${this.fmt(perdaCanc)} de receita não realizada`:'sem cancelamentos', c:'#94A3B8', vc:m.cancelados.length>0?'#F87171':'#94A3B8' }
+        ];
+
+        document.getElementById('upg-kpis').innerHTML = kpis.map(k => `
+            <div class="kpi-card" style="--kpi-accent:${k.c}">
+                <p class="kpi-label">${k.l}</p>
+                <p class="kpi-value"${k.vc ? ` style="color:${k.vc}"` : ''}>${k.v}</p>
+                <p class="kpi-sub">${k.s}</p>
+            </div>
+        `).join('');
+
+        this.renderUpgradeCharts(m);
+        document.getElementById('upg-last-update').innerText = `Referência: ${hojeStr} · ${diasUteisMes} dias úteis no mês`;
+    },
+
+    /* Gráficos da visão dedicada */
+    renderUpgradeCharts(m) {
+        const BRL = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+        /* ── 1. Evolução acumulada ── */
+        const movs = [...m.ups, ...m.downs].filter(d => d.date).sort((a,b) => a.date - b.date);
+        const dias = [...new Set(movs.map(d => d.d_p))].sort((a,b) => {
+            const [da,ma,ya] = a.split('/').map(Number);
+            const [db,mb,yb] = b.split('/').map(Number);
+            return new Date(ya,ma-1,da) - new Date(yb,mb-1,db);
+        });
+        let accUp = 0, accDn = 0;
+        const serieUp = [], serieDn = [];
+        dias.forEach(dia => {
+            const up = m.ups.filter(d => d.d_p === dia).reduce((a,b) => a+b.delta, 0);
+            const dn = m.downs.filter(d => d.d_p === dia).reduce((a,b) => a+b.delta, 0);
+            accUp += up; accDn += dn;
+            serieUp.push(+accUp.toFixed(2));
+            serieDn.push(+accDn.toFixed(2));
+        });
+
+        this.upgChart('upg-chart-evolucao', {
+            chart: { type:'line', height:280, background:'transparent', fontFamily:'Inter',
+                toolbar:{ show:true, tools:{ download:false, selection:false, zoom:true, zoomin:true, zoomout:true, pan:true, reset:true } },
+                zoom:{ enabled:true, type:'x', autoScaleYaxis:true }
+            },
+            theme: { mode: 'dark' },
+            series: [
+                { name: 'Upgrade (acumulado)',  data: serieUp },
+                { name: 'Downgrade (acumulado)', data: serieDn }
+            ],
+            colors: ['#60A5FA', '#F87171'],
+            stroke: { curve:'smooth', width:3 },
+            markers: { size:5, strokeWidth:0, hover:{ size:7 } },
+            xaxis: { categories: dias, labels:{ style:{ colors:'#94A3B8', fontSize:'10px' } }, axisBorder:{ show:false }, axisTicks:{ show:false } },
+            yaxis: { labels:{ style:{ colors:'#64748B', fontSize:'11px' }, formatter:v => 'R$ ' + (v/1000).toLocaleString('pt-BR', { maximumFractionDigits:1 }) + 'k' } },
+            grid: { borderColor:'rgba(148,163,184,.08)', strokeDashArray:3 },
+            legend: { labels:{ colors:'#94A3B8' }, position:'top', horizontalAlign:'right', fontSize:'11px' },
+            dataLabels: { enabled: false },
+            tooltip: { theme:'dark', shared:true, y:{ formatter:v => BRL(v) } }
+        });
+
+        /* ── 2. Ranking de incremento líquido por consultor ── */
+        const byV = {};
+        m.ups.forEach(d => byV[d.vendedor] = (byV[d.vendedor]||0) + d.delta);
+        m.downs.forEach(d => byV[d.vendedor] = (byV[d.vendedor]||0) + d.delta);
+        const sorted = Object.entries(byV).sort((a,b) => b[1] - a[1]);
+
+        this.upgChart('upg-chart-ranking', {
+            chart: { type:'bar', height:280, background:'transparent', fontFamily:'Inter', toolbar:{ show:false } },
+            theme: { mode: 'dark' },
+            series: [{ name:'Incremento', data: sorted.map(s => +s[1].toFixed(2)) }],
+            plotOptions: { bar:{ borderRadius:6, horizontal:true, distributed:true, barHeight:'55%' } },
+            colors: ['#34D399', '#60A5FA', '#818CF8', '#FBBF24', '#2DD4BF', '#F87171', '#A78BFA', '#FB923C'],
+            xaxis: { categories: sorted.map(s => s[0]),
+                labels:{ style:{ colors:'#94A3B8', fontSize:'10px' }, formatter:v => 'R$ ' + (v/1000).toLocaleString('pt-BR', { maximumFractionDigits:1 }) + 'k' },
+                axisBorder:{ show:false }, axisTicks:{ show:false }
+            },
+            yaxis: { labels:{ style:{ colors:'#94A3B8', fontSize:'11px', fontWeight:600 } } },
+            grid: { show:false },
+            legend: { show:false },
+            dataLabels: { enabled:true, style:{ fontSize:'10px', colors:['#0F172A'] }, formatter:v => BRL(v) },
+            tooltip: { theme:'dark', y:{ formatter:v => BRL(v) } }
+        });
+
+        /* ── 3. Planos antigos com mais upgrades ── */
+        const planMap = {};
+        m.ups.forEach(d => {
+            if (!planMap[d.planoAnt]) planMap[d.planoAnt] = { qtd:0, total:0, destinos:{} };
+            planMap[d.planoAnt].qtd++;
+            planMap[d.planoAnt].total += d.delta;
+            if (!planMap[d.planoAnt].destinos[d.planoNovo]) planMap[d.planoAnt].destinos[d.planoNovo] = { qtd:0, total:0 };
+            planMap[d.planoAnt].destinos[d.planoNovo].qtd++;
+            planMap[d.planoAnt].destinos[d.planoNovo].total += d.delta;
+        });
+        const planosOrd = Object.entries(planMap).sort((a,b) => b[1].qtd - a[1].qtd);
+
+        this.upgChart('upg-chart-planos', {
+            chart: { type:'bar', height:280, background:'transparent', fontFamily:'Inter', toolbar:{ show:false } },
+            theme: { mode: 'dark' },
+            series: [{ name:'Upgrades', data: planosOrd.map(p => p[1].qtd) }],
+            plotOptions: { bar:{ borderRadius:6, columnWidth:'55%', distributed:true, dataLabels:{ position:'top' } } },
+            colors: ['#34D399', '#60A5FA', '#818CF8', '#FBBF24', '#2DD4BF', '#F87171', '#A78BFA', '#FB923C'],
+            xaxis: { categories: planosOrd.map(p => p[0]),
+                labels:{ style:{ colors:'#94A3B8', fontSize:'10px' }, rotate:-30, trim:false },
+                axisBorder:{ show:false }, axisTicks:{ show:false }
+            },
+            yaxis: { labels:{ style:{ colors:'#64748B', fontSize:'11px' }, formatter:v => Math.round(v) } },
+            grid: { show:false },
+            legend: { show:false },
+            dataLabels: { enabled:true, offsetY:-22, style:{ fontSize:'11px', fontWeight:700, colors:['#94A3B8'] }, formatter:v => v + '×' },
+            tooltip: {
+                theme: 'dark',
+                custom: ({ dataPointIndex }) => {
+                    const [planoAnt, info] = planosOrd[dataPointIndex];
+                    const destinos = Object.entries(info.destinos).sort((a,b) => b[1].qtd - a[1].qtd);
+                    const linhas = destinos.map(([pNovo, d]) =>
+                        `<div style="display:flex;justify-content:space-between;gap:14px;padding:3px 0;font-size:11px">
+                           <span style="color:#94A3B8">→ ${pNovo}</span>
+                           <span style="color:#F1F5F9;font-weight:600">${d.qtd} cliente${d.qtd>1?'s':''} · <span style="color:#34D399">+${BRL(d.total)}</span></span>
+                         </div>`
+                    ).join('');
+                    return `<div style="background:#0F172A;border:1px solid #1E293B;border-radius:8px;padding:12px 14px;min-width:280px">
+                        <div style="font-size:12px;font-weight:700;color:#F1F5F9;margin-bottom:4px">${planoAnt}</div>
+                        <div style="font-size:11px;color:#94A3B8;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #1E293B">
+                            ${info.qtd} upgrade${info.qtd>1?'s':''} · <span style="color:#34D399;font-weight:700">+${BRL(info.total)}</span>
+                        </div>
+                        ${linhas}
+                    </div>`;
+                }
+            }
+        });
+    },
+
+    /* Helper de chart pra visão dedicada (renderiza limpo) */
+    upgChart(id, opt) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (el._chart) { el._chart.destroy(); }
+        el._chart = new ApexCharts(el, opt);
+        el._chart.render();
+    },
+
+    /* ── Drilldown modal ── */
+    openDrilldown(field, value) {
+        let list = [];
+        let title = value;
+
+        if (field === 'renov_month') {
+            const [rawKey, monthTitle] = value.split('|');
+            const [y, m] = rawKey.split('-').map(Number);
+            list = engine.data.filter(d => d.dateRenov && d.dateRenov.getMonth() === m && d.dateRenov.getFullYear() === y);
+            title = `Renovações: ${monthTitle}`;
+        } else if (field === 'status') {
+            list = engine.filtered.filter(d => d.status === value);
+        } else if (field === 'evolucao') {
+            list = engine.filteredInst.filter(d => (d.d_i || d.d_p) === value);
+        } else if (field === 'canal_origem') {
+            const [canal, origem] = value.split(' — ');
+            list = engine.filteredInst.filter(d => d.canal === canal && d.origem === origem);
+        } else if (['cid', 'segmento', 'plano'].includes(field)) {
+            // gráficos de receita → base de instalação
+            list = engine.filteredInst.filter(d => d[field] === value);
+        } else if (['mot', 'conc'].includes(field)) {
+            list = engine.filtered.filter(d => d[field] === value && d.status === 'PERDIDO');
+        } else if (['vendedor', 'porte'].includes(field)) {
+            list = engine.filtered.filter(d => d[field] === value);
+        } else {
+            list = engine.filtered.filter(d => d[field] === value);
+        }
+
+        document.getElementById('modalTitle').innerText = title;
+        document.getElementById('modalTableBody').innerHTML = list.map(d => {
+            const dateShow = field === 'renov_month' ? d.d_r
+                           : (['evolucao','canal_origem','cid','segmento','plano'].includes(field) ? (d.d_i || d.d_p)
+                           : d.d_p);
+            return `
+            <tr>
+                <td>${dateShow}</td>
+                <td>${d.vendedor}</td>
+                <td>${d.emp}</td>
+                <td>${d.plano}</td>
+                <td>${this.fmt(d.valor)}</td>
+                <td><span style="color:${d.status==='VENDA EFETIVADA'?'var(--success)':(d.status==='PERDIDO'?'var(--danger)':'var(--warning)')}">${d.status}</span></td>
+            </tr>`;
+        }).join('');
+        document.getElementById('modal').classList.add('active');
+    }
+};
+
+/* ── Init ── */
+ui.syncAndRender();
+
+/* ── Auto-refresh every 5 minutes ── */
+setInterval(() => ui.syncAndRender(), 5 * 60 * 1000);
+
+/* ── Close modal on backdrop click ── */
+document.getElementById('modal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('active');
+});
+</script>
+</body>
+</html>
