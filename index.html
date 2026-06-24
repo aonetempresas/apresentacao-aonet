@@ -1116,17 +1116,10 @@
 
 <script>
 /* ════════════════════════════════════════════════
-   UPGRADE — Configuração de metas
-   Edite estes valores quando precisar trocar.
-   Quando entrar vendedor novo, adicione uma linha aqui.
+   UPGRADE — Configuração
+   As metas agora são lidas DA PLANILHA (colunas M-T da aba Upgrade).
+   Não precisa mais editar metas aqui — só na planilha.
 ════════════════════════════════════════════════ */
-const METAS_UPGRADE = {
-    "":                  3000,   // Meta mensal do TIME
-    "LUIS CARLOS":       1500,
-    "RODRIGO GABRIEL":   1000,
-    "VINICIUS SALLAS":    500,
-    "JESSICA LIMA":       500
-};
 
 const CSV_URL_UPGRADE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTBH6_CprKZd0Go1LZ7ZbqLAiw8di-b3rtYK65Ww0EIuARR17V9sf3KMzg7kJzbB3GBu68lc03MLhaG/pub?gid=1039532197&single=true&output=csv";
 
@@ -1152,17 +1145,18 @@ class UpgradeEngine {
 
     parse(csv) {
         const lines = csv.split('\n');
-        // localiza primeira linha que começa com data dd/mm/aaaa
+        // ─── 1. Lançamentos (cols A-K) ───
+        // Localiza primeira linha que começa com data dd/mm/aaaa
         let start = -1;
         for (let i = 0; i < lines.length; i++) {
             if (/^["\s]*\d{2}\/\d{2}\/\d{4}/.test(lines[i])) { start = i; break; }
         }
-        if (start === -1) { this.data = []; return; }
+        if (start === -1) { this.data = []; }
 
         // Colunas A-K da aba Upgrades:
         // A Data | B Vendedor | C Empresa | D Origem | E Plano antigo | F Valor antigo
         // G Plano novo | H Valor novo | I Δ | J Tipo | K Status
-        this.data = lines.slice(start).map(line => {
+        this.data = (start === -1 ? [] : lines.slice(start)).map(line => {
             const v = this.splitLine(line);
             if (v.length < 5 || !v[1]) return null;
 
@@ -1186,6 +1180,76 @@ class UpgradeEngine {
                 date:      this.toDate(v[0])
             };
         }).filter(x => x && x.emp);
+
+        // ─── 2. Metas (cols M-T) ───
+        // Estrutura na planilha:
+        //   col M (12): MÊS de referência da meta ("06/2026")
+        //   col N (13): nome do vendedor (meta padrão)
+        //   col P (15): valor R$ (meta padrão)
+        //   col R (17): nome do vendedor (meta desafio)
+        //   col T (19): valor R$ (meta desafio)
+        // Meta do time fica numa linha sem mês: "Meta total (R$)" na col N e valor em P (padrão) ou T (desafio)
+        this.metasTimePadrao  = {};   // { "06/2026": 3000, ... }
+        this.metasTimeDesafio = {};
+        this.metasVendedorPadrao  = {};   // { "06/2026": { "LUIS CARLOS": 1500, ... } }
+        this.metasVendedorDesafio = {};
+
+        const numMeta = s => parseFloat((s||'').replace(/[R$\s.]/g,'').replace(',','.')) || 0;
+
+        lines.forEach(line => {
+            const v = this.splitLine(line);
+            if (v.length < 16) return;
+
+            const colM = (v[12]||'').trim();
+            const colN = (v[13]||'').trim();
+            const colP = (v[15]||'').trim();
+            const colR = (v[17]||'').trim();
+            const colT = (v[19]||'').trim();
+
+            // Detecta a linha da meta do TIME: "Meta total (R$)" em col N, valor em P (padrão) e T (desafio)
+            if (/meta\s+total/i.test(colN) && colP) {
+                // Como não há coluna MÊS na linha do time, vou marcar como "default" pra usar quando não tem mês específico
+                this.metasTimePadrao['*']  = numMeta(colP);
+                if (colT) this.metasTimeDesafio['*'] = numMeta(colT);
+            }
+
+            // Detecta linha de meta individual:
+            // - col M tem formato "06/2026"
+            // - col N tem o nome do vendedor (em maiúsculas, sem ser "Nome do vendedor")
+            // - col P tem o valor R$
+            const isMesValido = /^\d{2}\/\d{4}$/.test(colM);
+            const isVendedorValido = colN && !/nome\s+do\s+vendedor/i.test(colN) && !/meta\s+total/i.test(colN);
+
+            if (isMesValido && isVendedorValido && colP) {
+                const vendNome = colN.toUpperCase();
+                if (!this.metasVendedorPadrao[colM]) this.metasVendedorPadrao[colM] = {};
+                this.metasVendedorPadrao[colM][vendNome] = numMeta(colP);
+            }
+
+            // Meta desafio individual (col R + col T)
+            if (isMesValido && colR && !/nome\s+do\s+vendedor/i.test(colR) && colT) {
+                const vendNome = colR.toUpperCase();
+                if (!this.metasVendedorDesafio[colM]) this.metasVendedorDesafio[colM] = {};
+                this.metasVendedorDesafio[colM][vendNome] = numMeta(colT);
+            }
+        });
+    }
+
+    /* Retorna { padrao, desafio } pro vendedor (ou time) no mês informado.
+       mesAno no formato "MM/AAAA". Vendedor vazio = time. */
+    getMetas(mesAno, vendedor = '') {
+        if (vendedor) {
+            const p = (this.metasVendedorPadrao[mesAno]  || {})[vendedor];
+            const d = (this.metasVendedorDesafio[mesAno] || {})[vendedor];
+            return { padrao: p || 0, desafio: d || 0 };
+        }
+        // Time: soma metas individuais do mês como fallback, ou usa o valor cravado
+        const somaPadraoMes  = Object.values(this.metasVendedorPadrao[mesAno]  || {}).reduce((a,b)=>a+b,0);
+        const somaDesafioMes = Object.values(this.metasVendedorDesafio[mesAno] || {}).reduce((a,b)=>a+b,0);
+        return {
+            padrao:  this.metasTimePadrao['*']  || somaPadraoMes  || 0,
+            desafio: this.metasTimeDesafio['*'] || somaDesafioMes || 0
+        };
     }
 
     splitLine(l) {
@@ -2116,19 +2180,24 @@ const ui = {
         const perdaCanc  = m.cancelados.reduce((a,b) => a + b.delta, 0);
         const ticket     = m.ups.length ? incremento / m.ups.length : 0;
 
-        /* ── Meta ── */
-        const meta = METAS_UPGRADE[vendedor] || 0;
+        /* ── Meta — agora lê DA PLANILHA (cols M-T), não mais chumbada no código ── */
         const hoje = new Date();
         const ano  = hoje.getFullYear(), mes = hoje.getMonth();
+        const mesAnoAtual = String(mes+1).padStart(2,'0') + '/' + ano;  // ex: "06/2026"
 
-        // Dias úteis do mês (segunda a sexta)
+        // getMetas retorna { padrao, desafio } pro vendedor (ou time, se vazio)
+        const metas = upgradeEngine.getMetas(mesAnoAtual, vendedor);
+        const metaPadrao  = metas.padrao;
+        const metaDesafio = metas.desafio;
+
+        // Dias úteis do mês (segunda a sexta) — pra calcular meta diária
         let diasUteisMes = 0;
         const ultDia = new Date(ano, mes + 1, 0).getDate();
         for (let d = 1; d <= ultDia; d++) {
             const dow = new Date(ano, mes, d).getDay();
             if (dow >= 1 && dow <= 5) diasUteisMes++;
         }
-        const metaDiaria = diasUteisMes > 0 ? meta / diasUteisMes : 0;
+        const metaDiaria = diasUteisMes > 0 ? metaPadrao / diasUteisMes : 0;
 
         // Realizado do mês (ups + downs efetivados nas datas <= hoje, do mês atual)
         const inicioMes = new Date(ano, mes, 1);
@@ -2141,12 +2210,20 @@ const ui = {
         const realDia = m.ups.filter(d => d.d_p === hojeStr).reduce((a,b)=>a+b.delta,0)
                       + m.downs.filter(d => d.d_p === hojeStr).reduce((a,b)=>a+b.delta,0);
 
-        const pctMes = meta > 0 ? (realMes / meta) * 100 : 0;
-        const pctDia = metaDiaria > 0 ? (realDia / metaDiaria) * 100 : 0;
+        const pctMesPadrao  = metaPadrao  > 0 ? (realMes / metaPadrao)  * 100 : 0;
+        const pctMesDesafio = metaDesafio > 0 ? (realMes / metaDesafio) * 100 : 0;
+        const pctDia        = metaDiaria  > 0 ? (realDia / metaDiaria)  * 100 : 0;
 
-        const corDe = pct => pct >= 100 ? '#34D399' : (pct >= 70 ? '#FBBF24' : '#60A5FA');
-        const subMeta = (pct, metaVal) => {
-            const cor = corDe(pct);
+        // Cor da meta: verde se ≥100%, amarelo se ≥70%, azul se <70%, vermelho se realizado for negativo
+        const corMeta = (real, pct) => {
+            if (real < 0) return '#F87171';      // negativo = vermelho
+            if (pct >= 100) return '#34D399';    // bateu = verde
+            if (pct >= 70)  return '#FBBF24';    // perto = amarelo
+            return '#60A5FA';                    // longe = azul
+        };
+
+        const subMeta = (pct, metaVal, real) => {
+            const cor = corMeta(real, pct);
             const pctTxt = pct.toFixed(1).replace('.', ',') + '%';
             return `<span style="color:${cor};font-weight:700">${pctTxt}</span> de ${this.fmt(metaVal)}`;
         };
@@ -2156,9 +2233,21 @@ const ui = {
             ? `seria + ${this.fmt(incremento)}, mas teve <span style="color:#F87171;font-weight:700">${this.fmt(retracao)}</span> de downgrade`
             : 'só upgrade efetivado';
 
+        // Texto pra caso meta não configurada
+        const metaPadraoLabel = metaPadrao > 0
+            ? subMeta(pctMesPadrao, metaPadrao, realMes)
+            : `<span style="color:#94A3B8">Meta não configurada para ${mesAnoAtual}</span>`;
+        const metaDesafioLabel = metaDesafio > 0
+            ? subMeta(pctMesDesafio, metaDesafio, realMes)
+            : `<span style="color:#94A3B8">Meta desafio não configurada para ${mesAnoAtual}</span>`;
+        const metaDiariaLabel = metaDiaria > 0
+            ? subMeta(pctDia, metaDiaria, realDia)
+            : `<span style="color:#94A3B8">Sem meta diária (meta mensal não definida)</span>`;
+
         const kpis = [
-            { l:'Meta hoje',  v:(realDia>=0?'+ ':'')+this.fmt(realDia), s:subMeta(pctDia, metaDiaria), vc:corDe(pctDia), c:corDe(pctDia) },
-            { l:'Meta mês',   v:(realMes>=0?'+ ':'')+this.fmt(realMes), s:subMeta(pctMes, meta),       vc:corDe(pctMes), c:corDe(pctMes) },
+            { l:'Meta hoje',         v:(realDia>=0?'+ ':'')+this.fmt(realDia), s:metaDiariaLabel,  vc:corMeta(realDia, pctDia), c:corMeta(realDia, pctDia) },
+            { l:'Meta mês',          v:(realMes>=0?'+ ':'')+this.fmt(realMes), s:metaPadraoLabel,  vc:corMeta(realMes, pctMesPadrao), c:corMeta(realMes, pctMesPadrao) },
+            { l:'Meta desafio mês',  v:(realMes>=0?'+ ':'')+this.fmt(realMes), s:metaDesafioLabel, vc:corMeta(realMes, pctMesDesafio), c:corMeta(realMes, pctMesDesafio) },
             { l:'Upgrades efetivados', v:m.ups.length, s:'finalizados no período', c:'#34D399' },
             { l:'Incremento de receita', v:(liquido>=0?'+ ':'')+this.fmt(liquido), s:subIncremento, c:'#34D399', vc:(liquido>=0?'#34D399':'#F87171') },
             { l:'Ticket médio do upgrade', v:this.fmt(ticket), s:'Δ médio por upgrade', c:'#2DD4BF' },
@@ -2177,7 +2266,7 @@ const ui = {
         `).join('');
 
         this.renderUpgradeCharts(m);
-        document.getElementById('upg-last-update').innerText = `Referência: ${hojeStr} · ${diasUteisMes} dias úteis no mês`;
+        document.getElementById('upg-last-update').innerText = `Referência: ${hojeStr} · ${diasUteisMes} dias úteis no mês · metas de ${mesAnoAtual}`;
     },
 
     /* Gráficos da visão dedicada */
