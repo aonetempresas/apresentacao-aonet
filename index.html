@@ -812,7 +812,74 @@
         .upg-kpi-strip::-webkit-scrollbar { height: 6px; }
         .upg-kpi-strip::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
 
-        /* Cards de gráfico na visão dedicada */
+        /* ───── Linha de "Pulso do Mês" — micro-cards discretos ───── */
+        .upg-pulse-row {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+        .upg-pulse-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 12px 14px;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 84px;
+        }
+        .upg-pulse-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; bottom: 0;
+            width: 3px;
+            background: var(--pulse-accent, var(--text-muted));
+        }
+        .upg-pulse-label {
+            font-size: 9px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            line-height: 1.2;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .upg-pulse-value {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.1;
+            letter-spacing: -0.3px;
+            font-variant-numeric: tabular-nums;
+        }
+        .upg-pulse-sub {
+            font-size: 9.5px;
+            color: var(--text-muted);
+            margin-top: 3px;
+            line-height: 1.3;
+        }
+        .upg-pulse-rs {
+            font-size: 10px;
+            font-weight: 600;
+            margin-top: 4px;
+            line-height: 1.3;
+            opacity: 0.95;
+        }
+        @media (max-width: 900px) {
+            .upg-pulse-row { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 480px) {
+            .upg-pulse-row { grid-template-columns: 1fr; }
+        }
+
+        /* ───── Cards de gráfico ───── */
         .upg-charts-grid {
             display: grid;
             grid-template-columns: repeat(12, 1fr);
@@ -1067,12 +1134,14 @@
         <button class="upg-back" onclick="ui.closeUpgradeView()">← Voltar à esteira principal</button>
         <div class="upg-section-tag">📈 Visão Dedicada — Upgrades &amp; Migrações</div>
 
+        <!-- Pulso do mês — 4 micro-cards discretos -->
+        <div class="upg-pulse-row" id="upg-pulse"></div>
+
         <div class="upg-filter-bar">
             <div class="filter-item">
                 <label>Vendedor</label>
                 <select id="upg-filter-vendedor" onchange="ui.updateUpgFilter(this.value)"></select>
             </div>
-            <div style="margin-left:auto;font-size:11px;color:var(--text-muted)" id="upg-last-update"></div>
         </div>
 
         <div class="upg-kpi-strip" id="upg-kpis"></div>
@@ -2277,7 +2346,134 @@ const ui = {
         `).join('');
 
         this.renderUpgradeCharts(m);
-        document.getElementById('upg-last-update').innerText = `Referência: ${hojeStr} · ${diasUteisMes} dias úteis no mês · metas de ${mesAnoAtual}`;
+        // Pulso do mês — 4 micro-cards (dias úteis, transcorrido, ritmo padrão, ritmo desafio)
+        this.renderUpgradePulse({
+            hoje, ano, mes, diasUteisMes, mesAnoAtual,
+            realMes, metaPadrao, metaDesafio,
+            pctMesPadrao, pctMesDesafio
+        });
+    },
+
+    /* Pulso do mês — calcula e renderiza os 4 micro-cards no topo da visão dedicada */
+    renderUpgradePulse(ctx) {
+        const { hoje, ano, mes, diasUteisMes, realMes,
+                metaPadrao, metaDesafio, pctMesPadrao, pctMesDesafio } = ctx;
+
+        // Dias úteis decorridos (segunda a sexta, contando hoje)
+        let diasDecorridos = 0;
+        for (let d = 1; d <= hoje.getDate(); d++) {
+            const dow = new Date(ano, mes, d).getDay();
+            if (dow >= 1 && dow <= 5) diasDecorridos++;
+        }
+        const diasRestantes = Math.max(0, diasUteisMes - diasDecorridos);
+        const pctTranscorrido = diasUteisMes > 0 ? (diasDecorridos / diasUteisMes) * 100 : 0;
+
+        // Nome do mês em pt-BR
+        const nomesMeses = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+        const mesNome = `${nomesMeses[mes]}/${ano}`;
+
+        // R$ esperado neste ponto do mês (proporcional ao tempo transcorrido)
+        const esperadoPadrao  = metaPadrao  * (pctTranscorrido / 100);
+        const esperadoDesafio = metaDesafio * (pctTranscorrido / 100);
+        const gapPadrao  = realMes - esperadoPadrao;    // negativo = falta; positivo = acima
+        const gapDesafio = realMes - esperadoDesafio;
+
+        const fmt = v => v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+
+        // Avaliação de ritmo — retorna { label, cor, pcts, rs }
+        // pcts = linha com porcentagens nomeadas
+        // rs   = linha com R$ que falta/sobra pra estar no ritmo
+        const avaliaPadrao = () => {
+            if (metaPadrao === 0) {
+                return { label: 'Sem meta', cor: '#94A3B8',
+                         pcts: `defina meta de ${mesNome} na planilha`, rs: '' };
+            }
+            const pctTxt = `${pctMesPadrao.toFixed(0)}% da meta · ${pctTranscorrido.toFixed(0)}% do mês`;
+            if (pctMesPadrao >= 100) {
+                // Bateu a meta — mostra o que falta pro desafio (se houver)
+                const faltaDesafio = metaDesafio - realMes;
+                return { label: 'META BATIDA', cor: '#34D399', pcts: pctTxt,
+                         rs: (metaDesafio > 0 && faltaDesafio > 0)
+                              ? `faltam ${fmt(faltaDesafio)} pro desafio`
+                              : 'meta superada' };
+            }
+            const rsTxt = gapPadrao < 0
+                ? `faltam ${fmt(Math.abs(gapPadrao))} pra estar no ritmo`
+                : `está ${fmt(gapPadrao)} acima do ritmo`;
+            if (gapPadrao >= 0)         return { label: 'NO RITMO', cor: '#34D399', pcts: pctTxt, rs: rsTxt };
+            // gap negativo — avalia quão atrás está em percentual
+            const diffPct = pctMesPadrao - pctTranscorrido;
+            if (diffPct >= -10)         return { label: 'ATENÇÃO',  cor: '#FBBF24', pcts: pctTxt, rs: rsTxt };
+            return                              { label: 'ATRASADO', cor: '#F87171', pcts: pctTxt, rs: rsTxt };
+        };
+
+        const avaliaDesafio = () => {
+            if (metaDesafio === 0) {
+                return { label: 'Sem desafio', cor: '#94A3B8',
+                         pcts: `defina meta desafio de ${mesNome}`, rs: '' };
+            }
+            const pctTxt = `${pctMesDesafio.toFixed(0)}% do desafio · ${pctTranscorrido.toFixed(0)}% do mês`;
+            if (pctMesDesafio >= 100) {
+                const sobra = realMes - metaDesafio;
+                return { label: 'DESAFIO BATIDO 🏆', cor: '#34D399', pcts: pctTxt,
+                         rs: `bateu o desafio com ${fmt(sobra)} de folga` };
+            }
+            const rsTxt = gapDesafio < 0
+                ? `faltam ${fmt(Math.abs(gapDesafio))} pra estar no ritmo`
+                : `está ${fmt(gapDesafio)} acima do ritmo`;
+            // Desafio é stretch — atrasado fica em cinza (não cobrança), no ritmo fica verde
+            if (gapDesafio >= 0) return { label: 'NO RITMO',  cor: '#34D399', pcts: pctTxt, rs: rsTxt };
+            return                       { label: 'A CAMINHO', cor: '#94A3B8', pcts: pctTxt, rs: rsTxt };
+        };
+
+        const rPadrao  = avaliaPadrao();
+        const rDesafio = avaliaDesafio();
+
+        const cards = [
+            {
+                emoji: '📅',
+                label: 'Dias úteis',
+                value: `${diasDecorridos} de ${diasUteisMes}`,
+                sub:   diasRestantes === 0 ? 'último dia útil' : `${diasRestantes} dias restantes`,
+                rs:    '',
+                cor:   '#60A5FA'
+            },
+            {
+                emoji: '🕐',
+                label: 'Transcorrido',
+                value: `${pctTranscorrido.toFixed(1).replace('.',',')}%`,
+                sub:   `${mesNome.toLowerCase()} (mês útil)`,
+                rs:    '',
+                cor:   '#818CF8'
+            },
+            {
+                emoji: '🚦',
+                label: 'Ritmo · meta',
+                value: rPadrao.label,
+                sub:   rPadrao.pcts,
+                rs:    rPadrao.rs,
+                cor:   rPadrao.cor,
+                valueColor: rPadrao.cor
+            },
+            {
+                emoji: '🏆',
+                label: 'Ritmo · desafio',
+                value: rDesafio.label,
+                sub:   rDesafio.pcts,
+                rs:    rDesafio.rs,
+                cor:   rDesafio.cor,
+                valueColor: rDesafio.cor
+            }
+        ];
+
+        document.getElementById('upg-pulse').innerHTML = cards.map(c => `
+            <div class="upg-pulse-card" style="--pulse-accent:${c.cor}">
+                <div class="upg-pulse-label">${c.emoji} ${c.label}</div>
+                <div class="upg-pulse-value"${c.valueColor ? ` style="color:${c.valueColor}"` : ''}>${c.value}</div>
+                <div class="upg-pulse-sub">${c.sub}</div>
+                ${c.rs ? `<div class="upg-pulse-rs" style="color:${c.valueColor || 'var(--text-muted)'}">${c.rs}</div>` : ''}
+            </div>
+        `).join('');
     },
 
     /* Gráficos da visão dedicada */
