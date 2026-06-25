@@ -879,6 +879,31 @@
             .upg-pulse-row { grid-template-columns: 1fr; }
         }
 
+        /* Legenda discreta dos status de ritmo */
+        .upg-pulse-legend {
+            display: flex;
+            justify-content: flex-end;
+            gap: 18px;
+            margin: -8px 0 18px 0;
+            font-size: 10px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .upg-pulse-legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        @media (max-width: 768px) {
+            .upg-pulse-legend { justify-content: flex-start; flex-wrap: wrap; gap: 12px; }
+        }
+
         /* ───── Cards de gráfico ───── */
         .upg-charts-grid {
             display: grid;
@@ -1136,6 +1161,11 @@
 
         <!-- Pulso do mês — 4 micro-cards discretos -->
         <div class="upg-pulse-row" id="upg-pulse"></div>
+        <div class="upg-pulse-legend">
+            <span><span class="legend-dot" style="background:#34D399"></span> No ritmo</span>
+            <span><span class="legend-dot" style="background:#FBBF24"></span> Um pouco atrás</span>
+            <span><span class="legend-dot" style="background:#F87171"></span> Atrasado</span>
+        </div>
 
         <div class="upg-filter-bar">
             <div class="filter-item">
@@ -2403,7 +2433,7 @@ const ui = {
             if (gapPadrao >= 0)         return { label: 'NO RITMO', cor: '#34D399', pcts: pctTxt, rs: rsTxt };
             // gap negativo — avalia quão atrás está em percentual
             const diffPct = pctMesPadrao - pctTranscorrido;
-            if (diffPct >= -10)         return { label: 'ATENÇÃO',  cor: '#FBBF24', pcts: pctTxt, rs: rsTxt };
+            if (diffPct >= -10)         return { label: 'UM POUCO ATRÁS', cor: '#FBBF24', pcts: pctTxt, rs: rsTxt };
             return                              { label: 'ATRASADO', cor: '#F87171', pcts: pctTxt, rs: rsTxt };
         };
 
@@ -2421,9 +2451,11 @@ const ui = {
             const rsTxt = gapDesafio < 0
                 ? `faltam ${fmt(Math.abs(gapDesafio))} pra estar no ritmo`
                 : `está ${fmt(gapDesafio)} acima do ritmo`;
-            // Desafio é stretch — atrasado fica em cinza (não cobrança), no ritmo fica verde
-            if (gapDesafio >= 0) return { label: 'NO RITMO',  cor: '#34D399', pcts: pctTxt, rs: rsTxt };
-            return                       { label: 'A CAMINHO', cor: '#94A3B8', pcts: pctTxt, rs: rsTxt };
+            if (gapDesafio >= 0) return { label: 'NO RITMO', cor: '#34D399', pcts: pctTxt, rs: rsTxt };
+            // gap negativo — avalia quão atrás está em percentual (mesma régua do meta padrão)
+            const diffPct = pctMesDesafio - pctTranscorrido;
+            if (diffPct >= -10) return { label: 'UM POUCO ATRÁS', cor: '#FBBF24', pcts: pctTxt, rs: rsTxt };
+            return                       { label: 'ATRASADO', cor: '#F87171', pcts: pctTxt, rs: rsTxt };
         };
 
         const rPadrao  = avaliaPadrao();
@@ -2440,7 +2472,7 @@ const ui = {
             },
             {
                 emoji: '🕐',
-                label: 'Transcorrido',
+                label: '% Mês transcorrido',
                 value: `${pctTranscorrido.toFixed(1).replace('.',',')}%`,
                 sub:   `${mesNome.toLowerCase()} (mês útil)`,
                 rs:    '',
