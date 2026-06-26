@@ -202,6 +202,16 @@
             font-variant-numeric: tabular-nums;
         }
 
+        /* Texto discreto abaixo do label indicando a "base" do cálculo (ex: Últimos 3 dias) */
+        .kpi-base {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-muted);
+            font-style: italic;
+            line-height: 1.3;
+            margin: 0 0 6px 0;
+        }
+
         .kpi-sub {
             font-size: 12px;
             font-weight: 500;
@@ -962,13 +972,15 @@
         <section class="kpi-strip">
             <div class="kpi-card" style="--kpi-accent:var(--warning)">
                 <p class="kpi-label">Projeção Mensal</p>
+                <p class="kpi-base">Últimos 3 dias</p>
                 <p class="kpi-value" id="kpi-projecao" style="color:var(--warning)">R$ 0</p>
-                <p class="kpi-sub" id="kpi-projecao-sub">Base: Últimos 3 dias</p>
+                <p class="kpi-sub" id="kpi-projecao-sub">R$ 0/dia útil</p>
             </div>
             <div class="kpi-card" style="--kpi-accent:var(--primary)">
-                <p class="kpi-label">Projeção Mensal (Linear)</p>
+                <p class="kpi-label">Projeção Mensal</p>
+                <p class="kpi-base">Média do Mês</p>
                 <p class="kpi-value" id="kpi-projecao-linear" style="color:var(--primary)">R$ 0</p>
-                <p class="kpi-sub" id="kpi-projecao-linear-sub">Base: Média do Mês</p>
+                <p class="kpi-sub" id="kpi-projecao-linear-sub">R$ 0/dia útil</p>
             </div>
             <div class="kpi-card" style="--kpi-accent:var(--success)">
                 <p class="kpi-label">Valor de Vendas Instaladas</p>
@@ -1720,7 +1732,7 @@ const ui = {
         const projection = faturamento + (avgLast3 * bizDaysLeft);
         
         document.getElementById('kpi-projecao').innerText = this.fmt(projection);
-        document.getElementById('kpi-projecao-sub').innerText = `Est. Final: ${this.fmt(avgLast3)}/dia útil`;
+        document.getElementById('kpi-projecao-sub').innerText = `${this.fmt(avgLast3)}/dia útil`;
 
         // ── Projeção Mensal LINEAR — média do mês × dias úteis totais ──
         // Usa o ritmo médio do mês inteiro (desde o dia 1 até hoje) e projeta o fechamento.
@@ -1733,7 +1745,7 @@ const ui = {
         const projecaoLinear = mediaDia * diasUteisMes;
 
         document.getElementById('kpi-projecao-linear').innerText = this.fmt(projecaoLinear);
-        document.getElementById('kpi-projecao-linear-sub').innerText = `Est. Final: ${this.fmt(mediaDia)}/dia útil`;
+        document.getElementById('kpi-projecao-linear-sub').innerText = `${this.fmt(mediaDia)}/dia útil`;
     },
 
     /* ── CHARTS ── */
