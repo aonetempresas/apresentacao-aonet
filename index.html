@@ -964,30 +964,25 @@
                 <p class="kpi-value" id="kpi-projecao" style="color:var(--warning)">R$ 0</p>
                 <p class="kpi-sub" id="kpi-projecao-sub">Base: Últimos 3 dias</p>
             </div>
-            <div class="kpi-card" style="--kpi-accent:var(--primary)">
-                <p class="kpi-label">VOLUME TOTAL</p>
-                <p class="kpi-value" id="kpi-volume">R$ 0</p>
-                <p class="kpi-sub">Total de Propostas</p>
-            </div>
             <div class="kpi-card" style="--kpi-accent:var(--success)">
-                <p class="kpi-label">Faturamento Real</p>
+                <p class="kpi-label">Valor de Vendas Instaladas</p>
                 <p class="kpi-value" id="kpi-faturamento" style="color:var(--success)">R$ 0</p>
                 <p class="kpi-sub">Vendas Efetivadas</p>
             </div>
             <div class="kpi-card" style="--kpi-accent:var(--text-muted)">
-                <p class="kpi-label">Total Propostas</p>
+                <p class="kpi-label">Quantidade de Venda</p>
                 <p class="kpi-value" id="kpi-propostas">0</p>
-                <p class="kpi-sub">Leads no período</p>
+                <p class="kpi-sub" id="kpi-propostas-sub">R$ 0</p>
             </div>
             <div class="kpi-card" style="--kpi-accent:var(--success)">
                 <p class="kpi-label">Instaladas</p>
                 <p class="kpi-value" id="kpi-fechadas" style="color:var(--success)">0</p>
-                <p class="kpi-sub">Vendas Efetivadas</p>
+                <p class="kpi-sub" id="kpi-fechadas-sub">R$ 0</p>
             </div>
             <div class="kpi-card" style="--kpi-accent:var(--warning)">
                 <p class="kpi-label">Aguard. Instalação</p>
                 <p class="kpi-value" id="kpi-waiting" style="color:var(--warning)">0</p>
-                <p class="kpi-sub">Pendente ativação</p>
+                <p class="kpi-sub" id="kpi-waiting-sub">R$ 0</p>
             </div>
             <div class="kpi-card" style="--kpi-accent:var(--purple)">
                 <p class="kpi-label">Ticket Médio</p>
@@ -1598,20 +1593,23 @@ const ui = {
     renderKPIs() {
         const efet     = engine.filteredInst;                          // instaladas — por DATA DE INSTALAÇÃO
         const faturamento = efet.reduce((a,b) => a + b.valor, 0);
-        const volume   = engine.filtered.reduce((a,b) => a + b.valor, 0); // por DATA DA PROPOSTA
+        const volume   = engine.filtered.reduce((a,b) => a + b.valor, 0); // R$ de todas as propostas
         const fechadas = efet.length;
         const total    = engine.filtered.length;                       // propostas — por DATA DA PROPOSTA
         const waiting  = engine.aguardando.length;                     // retrato do pendente (ignora data)
+        const waitingValue = engine.aguardando.reduce((a,b) => a + b.valor, 0); // R$ pipeline
         const canceled = engine.filtered.filter(d => d.status === 'CANCELADO');
         const canceledCount = canceled.length;
         const canceledValue = canceled.reduce((a,b) => a + b.valor, 0);
         const churnRate = total ? (canceledCount / total * 100).toFixed(1) : 0;
 
-        document.getElementById('kpi-volume').innerText    = this.fmt(volume);
         document.getElementById('kpi-faturamento').innerText = this.fmt(faturamento);
         document.getElementById('kpi-propostas').innerText = total;
+        document.getElementById('kpi-propostas-sub').innerText = this.fmt(volume);
         document.getElementById('kpi-fechadas').innerText  = fechadas;
+        document.getElementById('kpi-fechadas-sub').innerText = this.fmt(faturamento);
         document.getElementById('kpi-waiting').innerText   = waiting;
+        document.getElementById('kpi-waiting-sub').innerText = this.fmt(waitingValue);
         document.getElementById('kpi-cancelados').innerText = canceledCount;
         document.getElementById('kpi-cancelados-sub').innerText = `Perda: ${churnRate}% (${this.fmt(canceledValue)})`;
         document.getElementById('kpi-ticket').innerText    = this.fmt(fechadas ? faturamento/fechadas : 0);
