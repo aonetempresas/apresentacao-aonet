@@ -965,6 +965,11 @@
                 <p class="kpi-value" id="kpi-projecao" style="color:var(--warning)">R$ 0</p>
                 <p class="kpi-sub" id="kpi-projecao-sub">Base: Últimos 3 dias</p>
             </div>
+            <div class="kpi-card" style="--kpi-accent:var(--primary)">
+                <p class="kpi-label">Projeção Mensal (Linear)</p>
+                <p class="kpi-value" id="kpi-projecao-linear" style="color:var(--primary)">R$ 0</p>
+                <p class="kpi-sub" id="kpi-projecao-linear-sub">Base: Média do Mês</p>
+            </div>
             <div class="kpi-card" style="--kpi-accent:var(--success)">
                 <p class="kpi-label">Valor de Vendas Instaladas</p>
                 <p class="kpi-value" id="kpi-faturamento" style="color:var(--success)">R$ 0</p>
@@ -1217,6 +1222,77 @@
 ════════════════════════════════════════════════ */
 
 const CSV_URL_UPGRADE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTBH6_CprKZd0Go1LZ7ZbqLAiw8di-b3rtYK65Ww0EIuARR17V9sf3KMzg7kJzbB3GBu68lc03MLhaG/pub?gid=1039532197&single=true&output=csv";
+
+const CSV_URL_FERIADOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTBH6_CprKZd0Go1LZ7ZbqLAiw8di-b3rtYK65Ww0EIuARR17V9sf3KMzg7kJzbB3GBu68lc03MLhaG/pub?gid=409396125&single=true&output=csv";
+
+/* ════════════════════════════════════════════════
+   ENGINE — Feriados (lê a aba "Feriados")
+   Mantém um Set de strings "dd/mm/aaaa" pra checagem rápida.
+   Usado em todas as projeções e cálculos de dias úteis do dashboard.
+════════════════════════════════════════════════ */
+class HolidaysEngine {
+    constructor(url) {
+        this.url = url;
+        this.set = new Set();  // Set de "dd/mm/aaaa"
+    }
+
+    async fetch() {
+        try {
+            const res = await fetch(this.url);
+            if (!res.ok) return;
+            const csv = await res.text();
+            this.parse(csv);
+        } catch (e) {
+            console.warn("Não foi possível carregar feriados:", e);
+        }
+    }
+
+    parse(csv) {
+        this.set.clear();
+        const lines = csv.split('\n');
+        for (const line of lines) {
+            // Procura padrão dd/mm/aaaa no início (após eventuais aspas)
+            const m = line.match(/^["\s]*(\d{2}\/\d{2}\/\d{4})/);
+            if (m) this.set.add(m[1]);
+        }
+    }
+
+    // Retorna true se a data é feriado.
+    // Aceita Date object ou string "dd/mm/aaaa"
+    isHoliday(d) {
+        if (!d) return false;
+        let key;
+        if (d instanceof Date) {
+            key = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+        } else {
+            key = String(d).trim();
+        }
+        return this.set.has(key);
+    }
+
+    // Helper: retorna true se a data é dia útil (seg-sex E não-feriado)
+    isBusinessDay(date) {
+        const dow = date.getDay();
+        if (dow === 0 || dow === 6) return false;  // domingo ou sábado
+        return !this.isHoliday(date);
+    }
+
+    // Conta dias úteis (seg-sex sem feriados) entre dataInicio e dataFim (inclusive)
+    countBusinessDays(dataInicio, dataFim) {
+        let count = 0;
+        const cur = new Date(dataInicio);
+        cur.setHours(0,0,0,0);
+        const fim = new Date(dataFim);
+        fim.setHours(0,0,0,0);
+        while (cur <= fim) {
+            if (this.isBusinessDay(cur)) count++;
+            cur.setDate(cur.getDate() + 1);
+        }
+        return count;
+    }
+}
+
+const holidaysEngine = new HolidaysEngine(CSV_URL_FERIADOS);
 
 /* ════════════════════════════════════════════════
    ENGINE — Upgrade (lê a aba "Upgrades")
@@ -1527,7 +1603,10 @@ const ui = {
     async syncAndRender() {
         try {
             document.getElementById('loader').style.display = 'flex';
+            // Carrega feriados em paralelo (não bloqueia mesmo se falhar)
+            const holidaysPromise = holidaysEngine.fetch().catch(e => console.warn('Feriados:', e));
             const ok = await engine.sync();
+            await holidaysPromise;
             // Sincroniza também a aba de Upgrades — totalmente isolada, NUNCA bloqueia
             try { await upgradeEngine.sync(); } catch(e) { console.warn('Upgrade sync falhou:', e); }
             if (ok) {
@@ -1558,9 +1637,11 @@ const ui = {
 
 
     // ── Auxiliares de Dias Úteis ──
+    // Agora desconta também os feriados (lidos da aba Feriados da planilha)
     isBusinessDay(date) {
         const day = date.getDay();
-        return day !== 0 && day !== 6; // 0=Dom, 6=Sáb
+        if (day === 0 || day === 6) return false; // 0=Dom, 6=Sáb
+        return !holidaysEngine.isHoliday(date);
     },
 
     getBusinessDaysLeft() {
@@ -1640,6 +1721,19 @@ const ui = {
         
         document.getElementById('kpi-projecao').innerText = this.fmt(projection);
         document.getElementById('kpi-projecao-sub').innerText = `Est. Final: ${this.fmt(avgLast3)}/dia útil`;
+
+        // ── Projeção Mensal LINEAR — média do mês × dias úteis totais ──
+        // Usa o ritmo médio do mês inteiro (desde o dia 1 até hoje) e projeta o fechamento.
+        const hoje = new Date();
+        const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        const fimMes    = new Date(hoje.getFullYear(), hoje.getMonth()+1, 0);
+        const diasUteisTrabalhados = holidaysEngine.countBusinessDays(inicioMes, hoje);
+        const diasUteisMes         = holidaysEngine.countBusinessDays(inicioMes, fimMes);
+        const mediaDia      = diasUteisTrabalhados > 0 ? faturamento / diasUteisTrabalhados : 0;
+        const projecaoLinear = mediaDia * diasUteisMes;
+
+        document.getElementById('kpi-projecao-linear').innerText = this.fmt(projecaoLinear);
+        document.getElementById('kpi-projecao-linear-sub').innerText = `Est. Final: ${this.fmt(mediaDia)}/dia útil`;
     },
 
     /* ── CHARTS ── */
