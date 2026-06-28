@@ -1263,14 +1263,6 @@
         <button class="upg-back" onclick="ui.closeUpgradeView()">← Voltar à esteira principal</button>
         <div class="upg-section-tag">📈 Visão Dedicada — Upgrades &amp; Migrações</div>
 
-        <!-- Pulso do mês — 4 micro-cards discretos -->
-        <div class="upg-pulse-row" id="upg-pulse"></div>
-        <div class="upg-pulse-legend">
-            <span><span class="legend-dot" style="background:#34D399"></span> No ritmo</span>
-            <span><span class="legend-dot" style="background:#FBBF24"></span> Um pouco atrás</span>
-            <span><span class="legend-dot" style="background:#F87171"></span> Atrasado</span>
-        </div>
-
         <div class="upg-filter-bar">
             <div class="filter-item">
                 <label>Vendedor</label>
@@ -2766,12 +2758,6 @@ const ui = {
         `).join('');
 
         this.renderUpgradeCharts(m);
-        // Pulso do mês — 4 micro-cards (dias úteis, transcorrido, ritmo padrão, ritmo desafio)
-        this.renderUpgradePulse({
-            hoje, ano, mes, diasUteisMes, mesAnoAtual,
-            realMes, metaPadrao, metaDesafio,
-            pctMesPadrao, pctMesDesafio
-        });
     },
 
     /* Pulso do mês — calcula e renderiza os 4 micro-cards no topo da visão dedicada */
