@@ -228,8 +228,8 @@
             .main-pulse-legend { justify-content: flex-start; flex-wrap: wrap; gap: 12px; }
         }
 
-        /* ─── KPI STRIP — horizontal, one row ─── */
-        .kpi-strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(134px, 1fr); gap: 12px; margin-bottom: 24px; width: 100%; overflow-x: auto; padding-bottom: 6px; }
+        /* ─── KPI STRIP — 6 colunas (2 fileiras de 6 com 12 cards) ─── */
+        .kpi-strip { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; margin-bottom: 24px; width: 100%; padding-bottom: 6px; }
         .kpi-strip::-webkit-scrollbar { height: 6px; }
         .kpi-strip::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
 
@@ -633,12 +633,12 @@
 
         /* ─── RESPONSIVE ─── */
         @media (max-width: 1400px) {
-            .kpi-strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(134px, 1fr); gap: 12px; margin-bottom: 24px; width: 100%; overflow-x: auto; padding-bottom: 6px; }
+            .kpi-strip { grid-template-columns: repeat(6, minmax(0, 1fr)); }
             .kpi-value { font-size: 16px; }
             .kpi-card { padding: 16px 14px; }
         }
         @media (max-width: 1100px) {
-            .kpi-strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(134px, 1fr); gap: 12px; margin-bottom: 24px; width: 100%; overflow-x: auto; padding-bottom: 6px; }
+            .kpi-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); }
         }
 
         @media (max-width: 1024px) {
@@ -650,13 +650,13 @@
 
         @media (max-width: 768px) {
             .main { padding: 16px; }
-            .kpi-strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(134px, 1fr); gap: 12px; margin-bottom: 24px; width: 100%; overflow-x: auto; padding-bottom: 6px; }
+            .kpi-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
             .header { padding: 16px; }
             .funnel-label { width: 100px; font-size: 10px; }
         }
 
         @media (max-width: 480px) {
-            .kpi-strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(134px, 1fr); gap: 12px; margin-bottom: 24px; width: 100%; overflow-x: auto; padding-bottom: 6px; }
+            .kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .kpi-value { font-size: 16px; }
         }
 
