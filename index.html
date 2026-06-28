@@ -149,6 +149,85 @@
             padding: 28px;
         }
 
+        /* ───── Linha de "Pulso do Mês" (principal) — micro-cards no topo ───── */
+        .main-pulse-row {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .main-pulse-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 12px 14px;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 84px;
+        }
+        .main-pulse-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; bottom: 0;
+            width: 3px;
+            background: var(--pulse-accent, var(--text-muted));
+        }
+        .main-pulse-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            line-height: 1.2;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .main-pulse-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.1;
+            letter-spacing: -0.3px;
+            font-variant-numeric: tabular-nums;
+        }
+        .main-pulse-sub {
+            font-size: 10.5px;
+            color: var(--text-muted);
+            margin-top: 3px;
+            line-height: 1.3;
+        }
+        .main-pulse-rs {
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 4px;
+            line-height: 1.3;
+            opacity: 0.95;
+        }
+        .main-pulse-legend {
+            display: flex;
+            justify-content: flex-end;
+            gap: 18px;
+            margin: -2px 0 16px 0;
+            font-size: 10px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .main-pulse-legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        @media (max-width: 900px) {
+            .main-pulse-row { grid-template-columns: repeat(1, 1fr); }
+            .main-pulse-legend { justify-content: flex-start; flex-wrap: wrap; gap: 12px; }
+        }
+
         /* ─── KPI STRIP — horizontal, one row ─── */
         .kpi-strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(134px, 1fr); gap: 12px; margin-bottom: 24px; width: 100%; overflow-x: auto; padding-bottom: 6px; }
         .kpi-strip::-webkit-scrollbar { height: 6px; }
@@ -968,6 +1047,14 @@
 
     <div class="main">
 
+        <!-- ─── PULSO DO MÊS — 3 micro-cards no topo ─── -->
+        <div class="main-pulse-row" id="main-pulse"></div>
+        <div class="main-pulse-legend">
+            <span><span class="legend-dot" style="background:#34D399"></span> No ritmo</span>
+            <span><span class="legend-dot" style="background:#FBBF24"></span> Um pouco atrás</span>
+            <span><span class="legend-dot" style="background:#F87171"></span> Atrasado</span>
+        </div>
+
         <!-- ─── KPI STRIP ─── -->
         <section class="kpi-strip">
             <div class="kpi-card" style="--kpi-accent:var(--warning)">
@@ -979,6 +1066,16 @@
                 <p class="kpi-label">Projeção Mensal</p>
                 <p class="kpi-value" id="kpi-projecao-linear" style="color:var(--primary)">R$ 0</p>
                 <p class="kpi-sub" id="kpi-projecao-linear-sub">Média do Mês</p>
+            </div>
+            <div class="kpi-card" style="--kpi-accent:var(--success)">
+                <p class="kpi-label">Meta Hoje</p>
+                <p class="kpi-value" id="kpi-meta-hoje" style="color:var(--success)">R$ 0</p>
+                <p class="kpi-sub" id="kpi-meta-hoje-sub">0% de R$ 0</p>
+            </div>
+            <div class="kpi-card" style="--kpi-accent:var(--success)">
+                <p class="kpi-label">Meta Mês</p>
+                <p class="kpi-value" id="kpi-meta-mes" style="color:var(--success)">R$ 0</p>
+                <p class="kpi-sub" id="kpi-meta-mes-sub">0% de R$ 0</p>
             </div>
             <div class="kpi-card" style="--kpi-accent:var(--success)">
                 <p class="kpi-label">Valor de Vendas Instaladas</p>
@@ -1481,6 +1578,7 @@ class DashboardEngine {
         this.url      = url;
         this.data     = [];
         this.filtered = [];
+        this.metasPorMes = {};   // defensivo — preenchido no parse
         this.filters  = { dateStart:'', dateEnd:'', vendedor:'', segmento:'' };
     }
 
@@ -1535,6 +1633,37 @@ class DashboardEngine {
                 dateRenov: this.toDate(r.d_r)
             };
         }).filter(x => x && x.emp);
+
+        // ── Parse das METAS (colunas X-AF) — lê a tabela de Metas e Propostas ──
+        // X (idx 23) = Mês_Referência ("06/2026")
+        // Y (idx 24) = Vendedor
+        // Z (idx 25) = Meta R$
+        this.metasPorMes = {};   // { "06/2026": { "LUIS CARLOS": 4000, ... } }
+        const numMeta = s => parseFloat((s||'').replace(/[R$\s.]/g,'').replace(',','.')) || 0;
+
+        for (const line of lines) {
+            const v = this.splitLine(line);
+            if (v.length < 26) continue;
+            const colX = (v[23]||'').trim();
+            const colY = (v[24]||'').trim().toUpperCase();
+            const colZ = (v[25]||'').trim();
+            // Linha válida de meta: X tem formato MM/AAAA, Y tem vendedor (não é cabeçalho), Z tem valor
+            if (/^\d{2}\/\d{4}$/.test(colX) && colY && !/vendedor/i.test(colY) && colZ) {
+                if (!this.metasPorMes[colX]) this.metasPorMes[colX] = {};
+                this.metasPorMes[colX][colY] = numMeta(colZ);
+            }
+        }
+    }
+
+    /* Retorna a meta do MÊS (mês corrente) somando as metas dos vendedores aplicáveis.
+       - Se filterVendedor estiver vazio: soma TODAS as metas cadastradas do mês.
+       - Se filterVendedor estiver setado: retorna só a meta dele (ou 0 se não cadastrada). */
+    getMetaMes(mesAno, vendedorFiltrado = '') {
+        const metasDoMes = this.metasPorMes[mesAno] || {};
+        if (vendedorFiltrado) {
+            return metasDoMes[vendedorFiltrado.toUpperCase()] || 0;
+        }
+        return Object.values(metasDoMes).reduce((a, b) => a + b, 0);
     }
 
     splitLine(l) {
@@ -1744,6 +1873,156 @@ const ui = {
 
         document.getElementById('kpi-projecao-linear').innerText = this.fmt(projecaoLinear);
         document.getElementById('kpi-projecao-linear-sub').innerHTML = `<i>Média do Mês</i> · ${this.fmt(mediaDia)}/dia útil`;
+
+        // ── Cards de META HOJE / META MÊS + Linha de Pulso ──
+        this.renderMetasAndPulse({
+            faturamento, hoje, inicioMes, fimMes,
+            diasUteisTrabalhados, diasUteisMes
+        });
+    },
+
+    /* Renderiza os 2 cards de meta (META HOJE / META MÊS) na esteira
+       e os 3 cards de pulso (Dias úteis / % Mês transcorrido / Ritmo · meta) no topo.
+       Lê metas direto da tabela de Metas e Propostas (colunas X-AF). */
+    renderMetasAndPulse(ctx) {
+        const { faturamento, hoje, inicioMes, fimMes,
+                diasUteisTrabalhados, diasUteisMes } = ctx;
+
+        // mês de referência no formato "MM/AAAA"
+        const mesAno = String(hoje.getMonth()+1).padStart(2,'0') + '/' + hoje.getFullYear();
+
+        // Vendedor filtrado (vazio = time todo)
+        const vendedorFiltrado = engine.filters.vendedor || '';
+
+        // Meta do mês (do time inteiro ou do vendedor)
+        const metaMes = engine.getMetaMes(mesAno, vendedorFiltrado);
+        const metaDiaria = diasUteisMes > 0 ? metaMes / diasUteisMes : 0;
+
+        // Realizado de HOJE — instalações de hoje (data de instalação = hoje)
+        const hojeStr = `${String(hoje.getDate()).padStart(2,'0')}/${String(hoje.getMonth()+1).padStart(2,'0')}/${hoje.getFullYear()}`;
+        const realizadoHoje = engine.filteredInst
+            .filter(d => d.dateInst && this._isSameDate(d.dateInst, hoje))
+            .reduce((a,b) => a + b.valor, 0);
+
+        // % atingimento
+        const pctDiaria = metaDiaria > 0 ? (realizadoHoje / metaDiaria) * 100 : 0;
+        const pctMes    = metaMes    > 0 ? (faturamento  / metaMes)    * 100 : 0;
+
+        // Cor por % atingido (verde >= 100, amarelo >= 70, azul < 70, vermelho se negativo)
+        const corMeta = pct => {
+            if (pct >= 100) return '#34D399';   // verde
+            if (pct >= 70)  return '#FBBF24';   // amarelo
+            return '#60A5FA';                    // azul (longe)
+        };
+
+        // ── Card META HOJE ──
+        const corHoje = corMeta(pctDiaria);
+        const elHoje    = document.getElementById('kpi-meta-hoje');
+        const elHojeSub = document.getElementById('kpi-meta-hoje-sub');
+        if (metaDiaria > 0) {
+            elHoje.style.color = corHoje;
+            elHoje.innerText = (realizadoHoje >= 0 ? '+ ' : '') + this.fmt(realizadoHoje);
+            elHojeSub.innerHTML = `<span style="color:${corHoje};font-weight:700">${pctDiaria.toFixed(1).replace('.',',')}%</span> de ${this.fmt(metaDiaria)}`;
+        } else {
+            elHoje.style.color = '#94A3B8';
+            elHoje.innerText = this.fmt(realizadoHoje);
+            elHojeSub.innerHTML = `<span style="color:#94A3B8">Meta diária não configurada</span>`;
+        }
+
+        // ── Card META MÊS ──
+        const corMes = corMeta(pctMes);
+        const elMes    = document.getElementById('kpi-meta-mes');
+        const elMesSub = document.getElementById('kpi-meta-mes-sub');
+        if (metaMes > 0) {
+            elMes.style.color = corMes;
+            elMes.innerText = this.fmt(faturamento);
+            elMesSub.innerHTML = `<span style="color:${corMes};font-weight:700">${pctMes.toFixed(1).replace('.',',')}%</span> de ${this.fmt(metaMes)}`;
+        } else {
+            elMes.style.color = '#94A3B8';
+            elMes.innerText = this.fmt(faturamento);
+            const txt = vendedorFiltrado
+                ? `Meta não cadastrada para ${vendedorFiltrado}`
+                : `Sem metas cadastradas para ${mesAno}`;
+            elMesSub.innerHTML = `<span style="color:#94A3B8">${txt}</span>`;
+        }
+
+        // ── PULSO DO MÊS ──
+        const diasRestantes = Math.max(0, diasUteisMes - diasUteisTrabalhados);
+        const pctTranscorrido = diasUteisMes > 0 ? (diasUteisTrabalhados / diasUteisMes) * 100 : 0;
+        const nomesMeses = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+        const mesNome = `${nomesMeses[hoje.getMonth()]}/${hoje.getFullYear()}`;
+
+        // Esperado neste ponto do mês (proporcional ao tempo transcorrido)
+        const esperadoMes = metaMes * (pctTranscorrido / 100);
+        const gapMes = faturamento - esperadoMes;
+
+        // Avaliação de ritmo (mesma régua do upgrade)
+        const avaliaRitmo = () => {
+            if (metaMes === 0) {
+                return { label: 'Sem meta', cor: '#94A3B8',
+                         pcts: vendedorFiltrado ? `cadastre meta para ${vendedorFiltrado}` : `cadastre metas para ${mesAno}`,
+                         rs: '' };
+            }
+            const pctTxt = `${pctMes.toFixed(0)}% da meta · ${pctTranscorrido.toFixed(0)}% do mês`;
+            if (pctMes >= 100) {
+                const sobra = faturamento - metaMes;
+                return { label: 'META BATIDA', cor: '#34D399', pcts: pctTxt,
+                         rs: `superada em ${this.fmt(sobra)}` };
+            }
+            const rsTxt = gapMes < 0
+                ? `faltam ${this.fmt(Math.abs(gapMes))} pra estar no ritmo`
+                : `está ${this.fmt(gapMes)} acima do ritmo`;
+            if (gapMes >= 0) return { label: 'NO RITMO', cor: '#34D399', pcts: pctTxt, rs: rsTxt };
+            const diffPct = pctMes - pctTranscorrido;
+            if (diffPct >= -10) return { label: 'UM POUCO ATRÁS', cor: '#FBBF24', pcts: pctTxt, rs: rsTxt };
+            return                       { label: 'ATRASADO',       cor: '#F87171', pcts: pctTxt, rs: rsTxt };
+        };
+        const r = avaliaRitmo();
+
+        const cards = [
+            {
+                emoji: '📅',
+                label: 'Dias úteis',
+                value: `${diasUteisTrabalhados} de ${diasUteisMes}`,
+                sub:   diasRestantes === 0 ? 'último dia útil' : `${diasRestantes} dias restantes`,
+                rs:    '',
+                cor:   '#60A5FA'
+            },
+            {
+                emoji: '🕐',
+                label: '% Mês transcorrido',
+                value: `${pctTranscorrido.toFixed(1).replace('.',',')}%`,
+                sub:   `${mesNome.toLowerCase()} (mês útil)`,
+                rs:    '',
+                cor:   '#818CF8'
+            },
+            {
+                emoji: '🚦',
+                label: 'Ritmo · meta',
+                value: r.label,
+                sub:   r.pcts,
+                rs:    r.rs,
+                cor:   r.cor,
+                valueColor: r.cor
+            }
+        ];
+
+        document.getElementById('main-pulse').innerHTML = cards.map(c => `
+            <div class="main-pulse-card" style="--pulse-accent:${c.cor}">
+                <div class="main-pulse-label">${c.emoji} ${c.label}</div>
+                <div class="main-pulse-value"${c.valueColor ? ` style="color:${c.valueColor}"` : ''}>${c.value}</div>
+                <div class="main-pulse-sub">${c.sub}</div>
+                ${c.rs ? `<div class="main-pulse-rs" style="color:${c.valueColor || 'var(--text-muted)'}">${c.rs}</div>` : ''}
+            </div>
+        `).join('');
+    },
+
+    // Helper: compara só dia/mês/ano de duas datas
+    _isSameDate(a, b) {
+        if (!a || !b) return false;
+        return a.getDate() === b.getDate()
+            && a.getMonth() === b.getMonth()
+            && a.getFullYear() === b.getFullYear();
     },
 
     /* ── CHARTS ── */
