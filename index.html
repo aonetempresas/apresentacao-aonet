@@ -2058,17 +2058,28 @@ const ui = {
             ...BASE,
             series: [{ name: 'Faturamento Real', data: evolKeys.map(k => +evol[k].v.toFixed(2)) }],
             chart:  { ...BASE.chart, type: 'area', height: 280,
-                events: { dataPointSelection: (e,c,cfg) => this.openDrilldown('evolucao', evolKeys[cfg.dataPointIndex]) }
+                events: {
+                    dataPointSelection: (e,c,cfg) => this.openDrilldown('evolucao', evolKeys[cfg.dataPointIndex]),
+                    markerClick: (e,c,cfg) => this.openDrilldown('evolucao', evolKeys[cfg.dataPointIndex]),
+                    click: (e,c,cfg) => {
+                        if (cfg && typeof cfg.dataPointIndex === 'number' && cfg.dataPointIndex >= 0) {
+                            this.openDrilldown('evolucao', evolKeys[cfg.dataPointIndex]);
+                        }
+                    }
+                }
             },
             colors: ['#60A5FA'],
             fill:   { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.25, opacityTo: 0 } },
             stroke: { curve: 'smooth', width: 2.5 },
             markers: {
-                size: 5,
-                colors: ['#1E293B'],
-                strokeColors: '#60A5FA',
-                strokeWidth: 2.5,
-                hover: { size: 8, sizeOffset: 3 }
+                size: 6,
+                colors: ['#60A5FA'],
+                strokeColors: '#1E293B',
+                strokeWidth: 2,
+                fillOpacity: 1,
+                discrete: [],
+                shape: 'circle',
+                hover: { size: 10, sizeOffset: 4 }
             },
             xaxis:  { ...BASE.xaxis, categories: evolKeys },
             yaxis:  { ...BASE.yaxis, labels: { ...BASE.yaxis.labels, formatter: v => (v/1000).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0}) + 'k' } },
