@@ -2150,9 +2150,15 @@ const ui = {
                 vMap[d.vendedor].daily[dt] = (vMap[d.vendedor].daily[dt] || 0) + d.valor;
             }
         });
+        // Ordena por R$ VENDIDO (volume real), não por % de conversão.
+        // Critério: maior valor vendido primeiro. Em empate, quem tem mais vendas, depois maior %.
         const vSorted = Object.entries(vMap)
             .map(([name, data]) => [name, data, data.f/data.t*100])
-            .sort((a,b) => b[2] - a[2])
+            .sort((a,b) => {
+                if (b[1].v !== a[1].v) return b[1].v - a[1].v;   // 1º: R$ vendido
+                if (b[1].f !== a[1].f) return b[1].f - a[1].f;   // 2º: quantidade de vendas
+                return b[2] - a[2];                                // 3º: % conversão
+            })
             ;
 
         const cardVendedor = document.getElementById('card-vendedor');
@@ -2470,16 +2476,22 @@ const ui = {
         const segLider    = this.getTop(efet, 'segmento');
         const planoLider  = this.getTop(efet, 'plano');
         const canalLider  = this.getTop(efet, 'canal');
+        const origemLider = this.getTop(efet, 'orig');
         const concLider   = this.getTop(engine.filtered.filter(d=>d.status==='PERDIDO'), 'conc');
         const motLider    = this.getTop(engine.filtered.filter(d=>d.status==='PERDIDO'), 'mot');
         const conv        = engine.filtered.length ? (efet.length/engine.filtered.length*100).toFixed(1) : 0;
+
+        // Combina canal + origem (ex: "RECEPTIVO / WHATSAPP")
+        const canalOrigem = (origemLider.name && origemLider.name !== 'N/A')
+            ? `${canalLider.name} / ${origemLider.name}`
+            : canalLider.name;
 
         document.getElementById('insight-resumo').innerHTML = `
             <p>Faturamento consolidado de <strong>${this.fmt(faturamento)}</strong> no período. O segmento <strong>${segLider.name}</strong> é o motor principal de receita, enquanto o plano <strong>${planoLider.name}</strong> lidera a aderência de mercado.</p>`;
 
         document.getElementById('insight-performance').innerHTML = `
             <ul>
-                <li>Canal líder: <strong>${canalLider.name}</strong></li>
+                <li>Canal líder: <strong>${canalOrigem}</strong></li>
                 <li>Principal concorrente: <strong>${concLider.name}</strong></li>
                 <li>Eficiência de conversão: <strong>${conv}%</strong></li>
             </ul>`;
