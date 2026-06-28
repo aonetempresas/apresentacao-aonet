@@ -140,6 +140,25 @@
             transform: translateY(-1px);
         }
 
+        /* Botão Tela Cheia — estilo neutro (cinza) pra não competir com os outros */
+        .btn-fullscreen {
+            background: rgba(148,163,184,0.1);
+            color: var(--text-muted);
+            border: 1px solid rgba(148,163,184,0.25);
+            padding: 9px 20px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+        .btn-fullscreen:hover {
+            background: rgba(148,163,184,0.2);
+            color: var(--text-main);
+            transform: translateY(-1px);
+        }
+
         /* ─── MAIN CONTENT ─── */
         .main {
             padding: 28px;
@@ -1036,6 +1055,7 @@
             </div>
         </div>
         <div class="header-right">
+            <button class="btn-fullscreen" onclick="ui.toggleFullscreen()" title="Tela cheia (F11)">⛶ &nbsp;Tela Cheia</button>
             <button class="btn-upgrade-toggle" onclick="ui.openUpgradeView()">📈 Upgrades</button>
             <button class="btn-sync" onclick="ui.syncAndRender()">⟳ &nbsp;Sincronizar</button>
         </div>
@@ -1725,6 +1745,25 @@ const ui = {
 
     fmt(v) {
         return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    },
+
+    /* Alterna entre tela cheia e modo normal usando a Fullscreen API do navegador.
+       Tecla ESC volta automático. */
+    toggleFullscreen() {
+        const elem = document.documentElement;
+        const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+
+        if (!isFullscreen) {
+            // Entrar em tela cheia
+            if (elem.requestFullscreen)        elem.requestFullscreen();
+            else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+            else if (elem.msRequestFullscreen)     elem.msRequestFullscreen();
+        } else {
+            // Sair da tela cheia
+            if (document.exitFullscreen)        document.exitFullscreen();
+            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+            else if (document.msExitFullscreen)     document.msExitFullscreen();
+        }
     },
 
     async syncAndRender() {
@@ -3086,6 +3125,17 @@ setInterval(() => ui.syncAndRender(), 5 * 60 * 1000);
 document.getElementById('modal').addEventListener('click', function(e) {
     if (e.target === this) this.classList.remove('active');
 });
+
+/* ── Fullscreen — atualiza o texto do botão dependendo do estado ── */
+function updateFullscreenButton() {
+    const btn = document.querySelector('.btn-fullscreen');
+    if (!btn) return;
+    const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+    btn.innerHTML = isFs ? '✕ &nbsp;Sair Tela Cheia' : '⛶ &nbsp;Tela Cheia';
+}
+document.addEventListener('fullscreenchange',       updateFullscreenButton);
+document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+document.addEventListener('msfullscreenchange',     updateFullscreenButton);
 </script>
 </body>
 </html>
