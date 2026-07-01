@@ -2034,7 +2034,25 @@ const ui = {
 
         // ── Projeção Mensal LINEAR — média do mês × dias úteis totais ──
         // Usa o ritmo médio do mês inteiro (desde o dia 1 até hoje) e projeta o fechamento.
-        const hoje = new Date();
+        // IMPORTANTE: usa o MÊS DO FILTRO como referência (se filtrar junho, cálculo é sobre junho).
+        // Se o filtro é o mês atual, usa hoje. Se é mês passado, usa o último dia daquele mês.
+        const agora = new Date();
+        let hoje;
+        if (engine.filters.dateStart) {
+            const [y, m] = engine.filters.dateStart.split('-').map(Number);
+            const mesFiltroAno = y;
+            const mesFiltroMes = m - 1;  // 0-indexed
+            const mesmoMesQueHoje = mesFiltroAno === agora.getFullYear() && mesFiltroMes === agora.getMonth();
+            if (mesmoMesQueHoje) {
+                hoje = agora;
+            } else {
+                // Mês passado ou futuro → usa o último dia do mês do filtro
+                hoje = new Date(mesFiltroAno, mesFiltroMes + 1, 0);
+            }
+        } else {
+            // Sem filtro → usa hoje mesmo
+            hoje = agora;
+        }
         const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
         const fimMes    = new Date(hoje.getFullYear(), hoje.getMonth()+1, 0);
         const diasUteisTrabalhados = holidaysEngine.countBusinessDays(inicioMes, hoje);
