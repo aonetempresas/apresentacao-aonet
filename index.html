@@ -92,6 +92,22 @@
             margin-top: 1px;
         }
 
+        /* Badge do mês visualizado — aparece ao lado do título "BI Executivo" */
+        .month-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 8px;
+            background: rgba(96, 165, 250, 0.12);
+            border: 1px solid rgba(96, 165, 250, 0.28);
+            color: #93C5FD;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+            white-space: nowrap;
+        }
+
         .header-right {
             grid-column: span 6;
             display: flex;
@@ -358,7 +374,6 @@
         .filter-item select option { background: #1E293B; }
 
         .btn-clear {
-            margin-left: auto;
             background: transparent;
             border: none;
             color: var(--danger);
@@ -367,9 +382,29 @@
             cursor: pointer;
             opacity: 0.8;
             font-family: 'Inter', sans-serif;
+            padding: 6px 10px;
         }
 
         .btn-clear:hover { opacity: 1; }
+
+        /* Botões de navegação de mês (◀ Anterior · Próximo ▶) */
+        .btn-month-nav {
+            background: rgba(96, 165, 250, 0.08);
+            border: 1px solid rgba(96, 165, 250, 0.25);
+            color: #93C5FD;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+        .btn-month-nav:hover {
+            background: rgba(96, 165, 250, 0.18);
+            border-color: rgba(96, 165, 250, 0.5);
+        }
 
         /* ─── CHARTS GRID — 12 cols ─── */
         .charts-grid {
@@ -1047,7 +1082,13 @@
         <div class="header-brand">
             <img class="header-logo" src="Empresas.png" alt="Aonet Empresas" />
             <div>
-                <h1>BI Executivo</h1>
+                <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                    <h1>BI Executivo</h1>
+                    <span id="month-indicator" class="month-indicator" style="display:none;">
+                        <span>📅</span>
+                        <span id="month-indicator-text">—</span>
+                    </span>
+                </div>
                 <div class="header-sub sync-status">
                     <div class="sync-dot"></div>
                     <span id="update-time">Sincronizando...</span>
@@ -1153,7 +1194,11 @@
                 <label>Segmento</label>
                 <select id="filter-segmento" onchange="ui.updateFilter('segmento', this.value)"></select>
             </div>
-            <button class="btn-clear" onclick="ui.clearFilters()">✕ Limpar Filtros</button>
+            <div style="display:flex; gap:6px; margin-left:auto;">
+                <button class="btn-month-nav" onclick="ui.navigateMonth(-1)" title="Mês anterior">◀ Mês Anterior</button>
+                <button class="btn-month-nav" onclick="ui.navigateMonth(1)" title="Próximo mês">Próximo Mês ▶</button>
+                <button class="btn-clear" onclick="ui.clearFilters()">✕ Limpar Filtros</button>
+            </div>
         </section>
 
         <!-- ─── CHARTS GRID ─── -->
@@ -1777,6 +1822,12 @@ const ui = {
             try { await upgradeEngine.sync(); } catch(e) { console.warn('Upgrade sync falhou:', e); }
             if (ok) {
                 this.populate();
+                // Define filtro do mês corrente apenas na PRIMEIRA carga (não sobrescreve filtro manual)
+                if (!this._initialFilterApplied) {
+                    this.setDefaultMonthFilter();
+                    this._initialFilterApplied = true;
+                }
+                this.updateMonthIndicator();
                 this.render();
                 document.getElementById('update-time').innerText = `Atualizado: ${new Date().toLocaleTimeString('pt-BR')}`;
                 // Tudo de upgrade roda APÓS o dashboard principal, isolado em try/catch
@@ -1792,6 +1843,99 @@ const ui = {
             document.getElementById('loader').style.display = 'none';
             document.getElementById('content').style.display = 'block';
         }
+    },
+
+    /* Define o filtro de data para o MÊS CORRENTE por padrão.
+       Chamado apenas na primeira carga do dashboard. */
+    setDefaultMonthFilter() {
+        const hoje = new Date();
+        const ano = hoje.getFullYear();
+        const mes = hoje.getMonth();  // 0-indexed
+        const primeiroDia = new Date(ano, mes, 1);
+        const ultimoDia   = new Date(ano, mes + 1, 0);
+
+        const toYMD = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+        const dateStart = toYMD(primeiroDia);
+        const dateEnd   = toYMD(ultimoDia);
+
+        // Preenche os inputs
+        document.getElementById('date-start').value = dateStart;
+        document.getElementById('date-end').value   = dateEnd;
+
+        // Aplica no engine
+        engine.filters.dateStart = dateStart;
+        engine.filters.dateEnd   = dateEnd;
+        engine.apply();
+    },
+
+    /* Atualiza o badge visual que mostra qual mês está sendo visualizado.
+       Aparece ao lado do título "BI Executivo" pra deixar claro pra quem olha. */
+    updateMonthIndicator() {
+        const bar   = document.getElementById('month-indicator');
+        const label = document.getElementById('month-indicator-text');
+        if (!bar || !label) return;
+
+        const ini = engine.filters.dateStart;
+        const fim = engine.filters.dateEnd;
+        const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+        if (!ini && !fim) {
+            // Sem filtro — mostra "Todos os períodos"
+            label.innerText = 'Todos os períodos';
+            bar.style.display = 'inline-flex';
+            return;
+        }
+
+        // Detecta se o intervalo cobre exatamente 1 mês completo
+        if (ini && fim) {
+            const [yA,mA,dA] = ini.split('-').map(Number);
+            const [yB,mB,dB] = fim.split('-').map(Number);
+            const ultimoDoMesFim = new Date(yB, mB, 0).getDate();
+            if (yA === yB && mA === mB && dA === 1 && dB === ultimoDoMesFim) {
+                label.innerText = `${meses[mA-1]}/${yA}`;
+                bar.style.display = 'inline-flex';
+                return;
+            }
+        }
+
+        // Intervalo customizado — mostra as datas
+        const fmt = s => s ? s.split('-').reverse().join('/') : '...';
+        label.innerText = `${fmt(ini)} → ${fmt(fim)}`;
+        bar.style.display = 'inline-flex';
+    },
+
+    /* Botão rápido: navega para mês anterior/próximo relativo ao filtro atual */
+    navigateMonth(direction) {
+        const iniStr = engine.filters.dateStart || document.getElementById('date-start').value;
+
+        let baseAno, baseMes;
+        if (iniStr) {
+            const [y, m] = iniStr.split('-').map(Number);
+            baseAno = y; baseMes = m - 1;  // 0-indexed
+        } else {
+            const hoje = new Date();
+            baseAno = hoje.getFullYear();
+            baseMes = hoje.getMonth();
+        }
+
+        // Move mês
+        const novaData = new Date(baseAno, baseMes + direction, 1);
+        const ano = novaData.getFullYear();
+        const mes = novaData.getMonth();
+        const primeiroDia = new Date(ano, mes, 1);
+        const ultimoDia   = new Date(ano, mes + 1, 0);
+        const toYMD = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+        document.getElementById('date-start').value = toYMD(primeiroDia);
+        document.getElementById('date-end').value   = toYMD(ultimoDia);
+
+        engine.filters.dateStart = toYMD(primeiroDia);
+        engine.filters.dateEnd   = toYMD(ultimoDia);
+        engine.apply();
+        this.updateMonthIndicator();
+        this.render();
+        try { this.renderUpgradeCard(); } catch(e) { console.warn('renderUpgradeCard:', e); }
     },
 
     render() {
@@ -2631,6 +2775,7 @@ const ui = {
     updateFilter(k, v) { 
         engine.filters[k] = (k === 'vendedor' || k === 'segmento') ? v.toUpperCase() : v; 
         engine.apply(); 
+        this.updateMonthIndicator();
         this.render(); 
         try { this.renderUpgradeCard(); } catch(e) { console.warn('renderUpgradeCard:', e); }
     },
@@ -2641,6 +2786,7 @@ const ui = {
         });
         engine.filters = { dateStart:'', dateEnd:'', vendedor:'', segmento:'' };
         engine.apply(); 
+        this.updateMonthIndicator();
         this.render();
         try { this.renderUpgradeCard(); } catch(e) { console.warn('renderUpgradeCard:', e); }
     },
